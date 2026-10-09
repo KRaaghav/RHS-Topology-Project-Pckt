@@ -9,7 +9,10 @@ Other files in this folder:
 - `tools/` - Python programs I wrote for the project (no installs needed):
   - `netcheck.py` checks subnets, the addressing plan and the inventory, compares configs and makes a config for a new room switch
   - `netconfig.py` builds configuration changes for groups of devices (all access switches, both distribution switches, ...)
-  - `netcheck_ui.py` is a simple page in the browser with buttons for both. Start it with `python3 tools/netcheck_ui.py`
+  - `pktconfig.py` writes those changes straight into `RHS School Network.pkt`, so nothing has to be pasted into each device
+  - `pktfile.py` unpacks and packs the `.pkt` file format (used by the other two)
+  - `pktlayout.py` arranges the devices on the canvas, draws the coloured boxes and writes the text notes in the lab
+  - `netcheck_ui.py` is a simple page in the browser with buttons for all of it. Start it with `python3 tools/netcheck_ui.py`
 - `screenshots/` - screenshots for this document (list is at the bottom)
 
 ## 1. Lab overview
@@ -343,6 +346,9 @@ When something does not work I go from the bottom up:
 - DHCP through the relay for three scopes, DHCP snooping and `default-information originate
   metric 100` are the parts I expect to need fixing first
 - no wireless, no guest network, no DAI
+- `pktconfig.py` and `pktlayout.py` change the `.pkt` file directly. The file they write unpacks again
+  and matches the `configs` folder, but it still has to be opened in Packet Tracer to see that every
+  device comes up with the new config. A copy from before each change is in `changes/backups`
 
 ## 11. Screenshots to take
 

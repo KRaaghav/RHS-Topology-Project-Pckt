@@ -74,10 +74,14 @@ def page_data():
     return {"devices": netconfig.load_devices(), "groups": netconfig.GROUPS, "changes": changes}
 
 
-def configure(body, write):
-    """Build the scripts for the chosen devices. With write=True they are also saved to files."""
+def configure(body, write, lab=False):
+    """Build the scripts for the chosen devices. With write=True they are also saved to files,
+    with lab=True they are also written into the Packet Tracer lab file."""
     try:
         devices = body.get("devices") or []
+        if lab:
+            title, scripts, notes, folder, changes = netconfig.apply(devices, body.get("change"), body.get("values") or {})
+            return {"title": title, "scripts": scripts, "notes": notes, "folder": folder, "changes": changes}
         if write:
             title, scripts, notes, folder = netconfig.save(devices, body.get("change"), body.get("values") or {})
         else:
@@ -131,6 +135,7 @@ PAGE = """<!doctype html>
   .msg { margin:14px 0 0; padding:10px 12px; border-radius:6px; border:1px solid var(--line); background:var(--card); font-size:14px; }
   .msg.bad { border-color:#b4472f; }
   .script { margin-top:12px; } .script .outhead { margin:0 0 6px; } .script pre { min-height:0; max-height:320px; }
+  .script pre + pre { margin-top:6px; }
   .count { color:var(--soft); font-size:13px; margin-top:8px; }
   pre { margin:0; background:var(--out); color:var(--outink); border-radius:8px; padding:14px; min-height:160px; max-height:560px; overflow:auto; font:13px/1.5 ui-monospace, Menlo, monospace; white-space:pre; }
 </style>
@@ -213,8 +218,9 @@ PAGE = """<!doctype html>
         <label for="change">What to configure</label>
         <select id="change" onchange="drawFields()"></select>
         <div id="fields"></div>
-        <button onclick="send(false)">Preview commands</button>
-        <button class="ghost" onclick="send(true)">Save scripts to files</button>
+        <button onclick="send('/preview')">Preview commands</button>
+        <button class="ghost" onclick="send('/save')">Save scripts to files</button>
+        <button class="ghost" onclick="send('/apply')">Write to the Packet Tracer lab</button>
       </div>
     </div>
     <div id="result"></div>
@@ -303,14 +309,16 @@ PAGE = """<!doctype html>
     }
   }
 
-  async function send(write) {
+  async function send(path) {
+    if (path === '/apply' && !confirm('Write this change into RHS School Network.pkt?\\n\\n' +
+        'Close the lab in Packet Tracer first. A copy of the file is kept in changes/backups.')) return;
     const values = {};
     for (const input of document.querySelectorAll('#fields [data-key]')) values[input.dataset.key] = input.value;
     const result = document.getElementById('result');
     result.textContent = '';
     let reply;
     try {
-      reply = await (await fetch(write ? '/save' : '/preview', {method: 'POST',
+      reply = await (await fetch(path, {method: 'POST',
         body: JSON.stringify({devices: chosenDevices(), change: val('change'), values: values})})).json();
     } catch (e) {
       result.appendChild(el('div', 'The program is not running any more. Start netcheck_ui.py again.', 'msg bad'));
@@ -322,7 +330,9 @@ PAGE = """<!doctype html>
     let text = reply.title + ': ' + names.length + ' device(s). ';
     text += reply.folder ? 'Saved in the folder changes/' + reply.folder + ' and added to changes/log.csv. '
                          : 'This is a preview, nothing was saved. ';
-    text += 'To apply: open the device in Packet Tracer, CLI tab, log in, type enable, then paste its script.';
+    text += reply.changes ? 'Written into the lab file and the configs folder. Open the lab in Packet Tracer to see it. ' +
+                            'Below each script is what changed in that device (+ added, - removed).'
+                          : 'To apply: press "Write to the Packet Tracer lab", or paste the script into the device CLI.';
     result.appendChild(el('div', text, 'msg'));
     for (const note of reply.notes) result.appendChild(el('div', note, 'msg'));
 
@@ -335,6 +345,7 @@ PAGE = """<!doctype html>
       head.appendChild(copy);
       part.appendChild(head);
       part.appendChild(el('pre', reply.scripts[name]));
+      if (reply.changes) part.appendChild(el('pre', reply.changes[name]));
       result.appendChild(part);
     }
     result.scrollIntoView({behavior: 'smooth', block: 'nearest'});
@@ -389,6 +400,8 @@ class Handler(BaseHTTPRequestHandler):
             self.send_text(json.dumps(configure(body, write=False)), "application/json")
         elif self.path == "/save":
             self.send_text(json.dumps(configure(body, write=True)), "application/json")
+        elif self.path == "/apply":
+            self.send_text(json.dumps(configure(body, write=True, lab=True)), "application/json")
         else:
             self.send_text(run(body.get("command"), body.get("values") or {}), "text/plain")
 

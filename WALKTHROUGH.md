@@ -8,7 +8,9 @@ worked. The examples are the real ones from this network.
 
 1. Open Packet Tracer, File > Open, pick `RHS School Network.pkt`.
 2. Wait about a minute. Link lights start orange and turn green when spanning tree is done.
-3. The text on the canvas says what each layer is. Zoom with Ctrl/Cmd + scroll.
+3. The text on the canvas says what the lab does and what each layer is. Each layer and each
+   room has its own coloured box. Zoom with Ctrl/Cmd + scroll. The same text is under the **i**
+   button (top left of the workspace).
 4. Bottom right: **Realtime** is normal. **Simulation** lets you watch one packet hop by hop
    (very good for seeing where an ACL drops something).
 
@@ -324,7 +326,7 @@ on every device, then File > Save.
 
 ## Part C - the Python tool
 
-There are three files in `tools/`. They need Python 3, which is already on a Mac. Nothing to install.
+The programs are in `tools/`. They need Python 3, which is already on a Mac. Nothing to install.
 
 ### With buttons
 
@@ -336,11 +338,21 @@ A page opens in the browser with two tabs:
 - **Configure devices** - pick a device group from the drop-down (all access switches, both
   distribution switches, ...), tick or untick single devices, pick a change from the second
   drop-down, fill in the boxes. Preview shows one script per device. Save also writes them to a
-  `changes` folder with a log.
+  `changes` folder with a log. **Write to the Packet Tracer lab** puts the change into the lab
+  file itself.
 
-Packet Tracer devices cannot be reached from outside Packet Tracer, so the last step is by hand:
-open the device, CLI tab, log in, `enable`, paste the script. On real equipment the same
-scripts would be sent over SSH.
+Packet Tracer devices cannot be reached over the network from outside Packet Tracer. But the
+whole lab is one file, and the running config of every device is in it. So "Write to the
+Packet Tracer lab" opens `RHS School Network.pkt`, changes the configs the way IOS would if the
+commands were typed, and saves it again. Then open the lab in Packet Tracer and the devices
+start with the new config. Rules:
+
+- close the lab in Packet Tracer first. It only reads the file when opening it, and saving
+  from Packet Tracer afterwards would put the old configs back
+- a copy of the lab from before every change goes into `changes/backups`
+- the file in `configs/` gets the same change, so the folder and the lab stay the same
+- pasting still works too: open the device, CLI tab, log in, `enable`, paste the script.
+  On real equipment the same scripts would be sent over SSH
 
 The scripts are different per device where they need to be. "Allow a VLAN on trunks" reads each
 device's saved config to find its trunk ports. "Create a VLAN gateway" gives DIST-L3-1 the .2
@@ -379,6 +391,35 @@ one in `configs/`.
 prints a full config for a new room switch, ready to paste into the CLI. Add a number at the
 end for fewer than 15 student ports.
 
+### Changing the lab file by typing
+
+    python3 pktconfig.py list
+
+shows the routers and switches in the lab file and the VLANs each switch knows.
+
+    python3 pktconfig.py show SW-E230
+
+prints the running config of one device as it is stored in the lab.
+
+    python3 pktconfig.py check
+
+compares every config in the lab with its file in `configs/`.
+
+    python3 pktconfig.py apply SW-E230 mychange.txt
+
+puts the commands from a text file into one device. Write the commands like you would type them
+after `configure terminal`, in full (`switchport mode access`, not `sw mo acc`), with a space in
+front of the lines that belong to an interface. Add `--dry-run` to only see what would change.
+`apply` with a folder from `changes/` does every device that has a file in it. Mistakes are
+caught before anything is written, for example a port that the switch does not have.
+Things that need a running device (`show`, `ping`, `crypto key generate rsa`) cannot be written
+into a file.
+
+    python3 pktlayout.py
+
+arranges the canvas again: devices on a grid, a coloured box per layer and room, and the text
+notes. The text of the notes is at the top of `pktlayout.py`, change it there and run it again.
+
 To see it catch mistakes, open `inventory.csv`, change an IP to one that is already used or to
 something like 10.10.70.300, and run the inventory check again.
 
@@ -394,5 +435,12 @@ something like 10.10.70.300, and run the inventory check again.
 - in `netconfig.py` every change is a function that gets one device and returns the config
   lines for that device, or nothing if the change does not fit that device. `CATALOG` is the
   list the drop-down is made from
+- a `.pkt` file is XML that Packet Tracer compresses (zlib) and encrypts (Twofish). `pktfile.py`
+  undoes that with the standard library only, so the Twofish cipher is written out in it
+- `pktconfig.py` finds each device in the XML, reads its config lines, and applies the commands
+  with a few rules: a line that already exists is left alone, a command that can only be there
+  once (`ip address`, `switchport mode`) replaces the old line, `no ...` removes a line, anything
+  else is put next to the lines that look like it. VLANs go into the VLAN database of the switch,
+  because that is where IOS keeps them (not in the running config)
 - `netcheck_ui.py` is a very small web server that only this computer can reach. A button on
   the page sends a request, the server calls the matching function and sends the text back

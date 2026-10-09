@@ -7,9 +7,10 @@ commands for every device. Devices do not all get the same lines: a 2960 and a 3
 their ports differently, DIST-L3-1 and DIST-L3-2 need different addresses, and some
 commands do not exist on a router. The program works that out per device.
 
-Packet Tracer devices cannot be reached from outside Packet Tracer, so the last step is
-pasting the script into the device's CLI. On real equipment the same scripts would be
-sent over SSH.
+Packet Tracer devices cannot be reached over the network from outside Packet Tracer, so
+apply() hands the scripts to pktconfig.py, which writes them into the lab file itself.
+(Pasting a script into the device's CLI still works too.) On real equipment the same
+scripts would be sent over SSH.
 
 Used by netcheck_ui.py (the "Configure devices" tab).
 """
@@ -19,6 +20,8 @@ import datetime
 import ipaddress
 import os
 import re
+
+import pktconfig
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 CONFIGS = os.path.join(HERE, "..", "configs")
@@ -105,8 +108,9 @@ def trunk_ports(name, contains=""):
 
 # ---------------------------------------------------------------- checking what was typed
 
-class Problem(Exception):
-    """Something the user typed is wrong. The text is shown on the page."""
+# Something the user typed is wrong. The text is shown on the page. It is the same class
+# as in pktconfig.py, so a mistake found while writing the lab is shown the same way.
+Problem = pktconfig.Problem
 
 
 def need_vlan(text):
@@ -300,7 +304,8 @@ CATALOG = [
      "help": "No changes, just saves what is running to the startup config.",
      "fields": []},
     {"id": "custom", "title": "Custom commands", "run": change_custom,
-     "help": "Type your own configuration lines. The same lines go to every chosen device.",
+     "help": "Type your own configuration lines. The same lines go to every chosen device. Write commands "
+             "out in full and put a space in front of the lines that belong to an interface.",
      "fields": [field("commands", "Commands (one per line)", "", big=True)]},
 ]
 
@@ -350,7 +355,22 @@ def save(device_names, change_id, values):
     title, scripts, notes = build(device_names, change_id, values)
     if not scripts:
         return title, scripts, notes, None
+    return title, scripts, notes, write_files(title, scripts, "no")
 
+
+def apply(device_names, change_id, values):
+    """Like save(), and the change is also written into the Packet Tracer lab file.
+    Returns (title, scripts, notes, folder, {device: what changed in its config})."""
+    title, scripts, notes = build(device_names, change_id, values)
+    if not scripts:
+        return title, scripts, notes, None, {}
+    result = pktconfig.apply(scripts)              # stops with a Problem before anything is written
+    notes = notes + result["notes"] + [f"The lab from before this change is in changes/backups/{result['backup']}"]
+    return title, scripts, notes, write_files(title, scripts, "yes"), result["changes"]
+
+
+def write_files(title, scripts, in_lab):
+    """Save the scripts and add a line to the log. Returns the name of the new folder."""
     now = datetime.datetime.now()
     slug = re.sub(r"[^a-z0-9]+", "-", title.lower()).strip("-")[:50]
     folder = os.path.join(CHANGES, now.strftime("%Y-%m-%d_%H%M%S") + "_" + slug)
@@ -364,6 +384,6 @@ def save(device_names, change_id, values):
     with open(log_path, "a", newline="") as f:
         writer = csv.writer(f)
         if is_new:
-            writer.writerow(["time", "change", "devices", "folder"])
-        writer.writerow([now.strftime("%Y-%m-%d %H:%M"), title, " ".join(scripts), os.path.basename(folder)])
-    return title, scripts, notes, os.path.basename(folder)
+            writer.writerow(["time", "change", "devices", "folder", "written to lab"])
+        writer.writerow([now.strftime("%Y-%m-%d %H:%M"), title, " ".join(scripts), os.path.basename(folder), in_lab])
+    return os.path.basename(folder)

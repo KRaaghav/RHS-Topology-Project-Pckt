@@ -34,14 +34,14 @@ from pktconfig import LAB, Problem, backup_lab, packet_tracer_is_open
 # ---------------------------------------------------------------- where everything goes
 # All numbers are pixels on the canvas. A device position is the middle of its icon.
 
-ROOM_WIDTH = 480
-ROOM_STEP = 520                 # room width plus the gap to the next room
-ROOMS_TOP, ROOMS_BOTTOM = 780, 1530
+ROOM_WIDTH = 600
+ROOM_STEP = 660                 # room width plus the gap to the next room
+ROOMS_TOP, ROOMS_BOTTOM = 930, 1810
 FIRST_ROOM_LEFT = 60
-SWITCH_Y = 900
-PC_ROWS = [1040, 1160, 1280, 1400]
-MIDDLE = 2120                   # the routers and layer 3 switches are centred on this line
-LAYER_LEFT, LAYER_RIGHT = 1790, 2450
+SWITCH_Y = 1060
+PC_ROWS = [1220, 1370, 1520, 1670]
+MIDDLE = 2670                   # the routers and layer 3 switches are centred on this line
+LAYER_LEFT, LAYER_RIGHT = 2280, 3060
 
 # colours of the boxes (red, green, blue)
 GREY, RED, PURPLE, BLUE = (232, 232, 232), (255, 216, 216), (228, 218, 255), (208, 226, 255)
@@ -57,16 +57,16 @@ ROOMS.append(("MDF (server room) + IT office\nVLAN 70 SERVERS, VLAN 99 NETWORK-I
               ["SRV-DHCP", "SRV-DNS-WEB", "SRV-LOG", "SRV-FILE", "IT-PC1", "IT-PC2"]))
 
 # the layers in the middle: (y, colour, {device: x})
-LAYERS = [(80, GREY, {"ISP": MIDDLE, "INET-SRV": MIDDLE + 230}),
-          (270, RED, {"RHS-EDGE1": MIDDLE - 190, "RHS-EDGE2": MIDDLE + 190}),
-          (460, PURPLE, {"CORE-L3-1": MIDDLE - 190, "CORE-L3-2": MIDDLE + 190}),
-          (650, BLUE, {"DIST-L3-1": MIDDLE - 190, "DIST-L3-2": MIDDLE + 190})]
+LAYERS = [(80, GREY, {"ISP": MIDDLE, "INET-SRV": MIDDLE + 290}),
+          (310, RED, {"RHS-EDGE1": MIDDLE - 240, "RHS-EDGE2": MIDDLE + 240}),
+          (540, PURPLE, {"CORE-L3-1": MIDDLE - 240, "CORE-L3-2": MIDDLE + 240}),
+          (770, BLUE, {"DIST-L3-1": MIDDLE - 240, "DIST-L3-2": MIDDLE + 240})]
 
 
 # ---------------------------------------------------------------- the text on the canvas
 # (x, y, text). Lines are kept under about 72 characters so the columns do not run into
-# each other. Four columns at the top (x = 60, 900, 2560, 3400), three notes at the bottom.
-# The notes at the top end above y = 660, so the uplinks to the rooms do not run through them.
+# each other. Four columns at the top (x = 60, 1100, 3300, 4300), three notes at the bottom.
+# The notes at the top end above y = 700, so the uplinks to the rooms do not run through them.
 
 NOTES = [
     (60, 15, """RHS CAMPUS NETWORK - CCNA project (Packet Tracer 9.0)
@@ -84,7 +84,7 @@ WHAT THIS LAB DOES
   cable between a room and the internet fails
 Three layers like the Cisco campus model: core, distribution, access."""),
 
-    (60, 420, """HOW A PACKET GETS OUT (E230-PC01 opens www.example.com)
+    (60, 470, """HOW A PACKET GETS OUT (E230-PC01 opens www.example.com)
 1. PC asks SRV-DHCP for an address. DIST relays it (ip helper-address)
 2. PC sends to its gateway 10.10.8.1, the HSRP address on DIST-L3-1
 3. ACL STUDENTS-IN on interface Vlan10 checks it: internet is allowed
@@ -93,46 +93,46 @@ Three layers like the Cisco campus model: core, distribution, access."""),
    sends it to the ISP. The answer comes back the same way.
 Watch it hop by hop in Simulation mode (bottom right corner)."""),
 
-    (900, 15, """INTERNET (simulated)
+    (1100, 15, """INTERNET (simulated)
 ISP router with loopback 8.8.8.8 as a ping target.
 INET-SRV is www.example.com (198.51.100.10).
 Public addresses are from the documentation ranges."""),
 
-    (900, 150, """EDGE ROUTERS (2911) - RHS-EDGE1 and RHS-EDGE2
+    (1100, 170, """EDGE ROUTERS (2911) - RHS-EDGE1 and RHS-EDGE2
 Connect the school to the ISP. Two routers and two ISP links,
 so one can fail. EDGE2 is the backup (default route metric 100).
 ip nat inside source list 1 interface g0/0/0 overload (PAT)
 ip nat inside source static (school website 203.0.113.10)
 ip access-group OUTSIDE-IN in, default-information originate"""),
 
-    (900, 340, """CORE LAYER (3650) - CORE-L3-1 and CORE-L3-2
+    (1100, 380, """CORE LAYER (3650) - CORE-L3-1 and CORE-L3-2
 Only routes between the edge and the distribution layer.
 No user VLANs and no ACLs here, so it stays simple and fast.
 ip routing, no switchport + ip address on each link
 router ospf 1 (area 0), channel-group 1 mode active (LACP)"""),
 
-    (900, 500, """DISTRIBUTION LAYER (3650) - DIST-L3-1 and DIST-L3-2
+    (1100, 560, """DISTRIBUTION LAYER (3650) - DIST-L3-1 and DIST-L3-2
 Default gateway of every VLAN. All rules between VLANs are here.
 DIST-L3-1 is HSRP active + STP root for VLAN 10, 70, 99.
 DIST-L3-2 is HSRP active + STP root for VLAN 20, 30.
 interface vlan + standby (gateway .1), ip helper-address
 ip access-list extended + ip access-group in, router ospf 1"""),
 
-    (2560, 15, """ACCESS LAYER - one 2960 per room, office and MDF are 3650 as layer 2
+    (3300, 15, """ACCESS LAYER - one 2960 per room, office and MDF are 3650 as layer 2
 Where the PCs plug in. Fa0/1-15 students, Fa0/16 teacher.
 One trunk to each distribution switch (Gi0/1 and Gi0/2).
 Spanning tree blocks one of them per VLAN, so there is no loop.
 switchport mode access, switchport access vlan
 switchport mode trunk, switchport trunk allowed vlan 10,20,99"""),
 
-    (2560, 210, """VLANS AND SUBNETS
+    (3300, 230, """VLANS AND SUBNETS
 10  STUDENTS     10.10.8.0/22     20  TEACHERS   10.10.20.0/24
 30  MANAGEMENT   10.10.30.0/24    70  SERVERS    10.10.70.0/24
 99  NETWORK-IT   10.10.99.0/24    998 unused ports, 999 native
 Gateway is always .1 (HSRP), DIST-L3-1 is .2 and DIST-L3-2 is .3.
 Links between routers are /30s from 10.10.0.0, OSPF single area 0."""),
 
-    (2560, 405, """WHO CAN REACH WHAT (ACLs on the distribution switches)
+    (3300, 450, """WHO CAN REACH WHAT (ACLs on the distribution switches)
 Students:    internet, the school website and DNS only
 Teachers:    servers, students, internet. Not management or IT
 Management:  everything except the IT VLAN
@@ -140,11 +140,11 @@ Network IT:  everything, and the only VLAN that may SSH to devices
 Servers:     may answer, may not start a connection into the school
 Internet:    only the school web server, on port 80 and 443"""),
 
-    (1200, 1560, """LOGINS (every router and switch, console included)
+    (1300, 1840, """LOGINS (every router and switch, console included)
 user admin / RHSadmin, enable secret RHSenable
 SSH from IT-PC1 after typing: crypto key generate rsa (1024)"""),
 
-    (3400, 15, """REDUNDANCY - what takes over when something fails
+    (4300, 15, """REDUNDANCY - what takes over when something fails
 ISP link 1 or RHS-EDGE1    -> RHS-EDGE2 (OSPF default route)
 a core switch              -> the other core (OSPF)
 a distribution switch      -> the other one (HSRP moves gateway .1)
@@ -152,14 +152,14 @@ an uplink of a room switch -> its other uplink (Rapid PVST+)
 one cable of a bundle      -> the other cable (LACP EtherChannel)
 EtherChannels: core to core, dist to dist, SW-MDF to each dist."""),
 
-    (3400, 235, """SECURITY ON THE ACCESS SWITCHES
+    (4300, 255, """SECURITY ON THE ACCESS SWITCHES
 PortFast + BPDU guard and sticky port security (max 2 MACs)
 DHCP snooping, only the uplinks may answer DHCP
 unused ports are shut down and parked in VLAN 998
 native VLAN 999 is empty, trunks do not negotiate
 SSH version 2 only, and only from the IT VLAN (access-class 10)"""),
 
-    (3400, 430, """THINGS TO TRY (wait a minute after opening for green links)
+    (4300, 470, """THINGS TO TRY (wait a minute after opening for green links)
 E230-PC01: ipconfig -> 10.10.8.x, gateway 10.10.8.1
 E230-PC01: ping C214-PC01 works, ping a teacher PC fails
 E230-PC01: browser www.rhs.lab works, ftp 10.10.70.30 fails
@@ -168,17 +168,17 @@ IT-PC1: ping anything, ssh -l admin 10.10.99.11
 DIST-L3-1: show standby brief, show etherchannel summary
 Break it: shutdown g0/0/0 on RHS-EDGE1 while a ping -t runs"""),
 
-    (60, 1560, """SERVERS (VLAN 70, static addresses)
+    (60, 1840, """SERVERS (VLAN 70, static addresses)
 SRV-DHCP 10.10.70.5 (DHCP for VLAN 10, 20, 30)     SRV-DNS-WEB 10.10.70.10 (DNS + www.rhs.lab)
 SRV-LOG 10.10.70.20 (syslog + NTP)                 SRV-FILE 10.10.70.30 (FTP for staff)
 IT-PC1 10.10.99.50, IT-PC2 10.10.99.51. Switch management: 10.10.99.11-16 rooms, .21 office, .22 MDF"""),
 
-    (1950, 1560, """MORE IN THE PROJECT FOLDER
+    (2200, 1840, """MORE IN THE PROJECT FOLDER
 README.md explains every design choice, WALKTHROUGH.md builds it step by step.
 configs/ has the config of every device with comments. tools/ has the Python programs
 that check the addressing plan and write config changes straight into this file."""),
 
-    (3000, 1560, """CHANGE CONFIGS WITH BUTTONS (NetCheck)
+    (3300, 1840, """CHANGE CONFIGS WITH BUTTONS (NetCheck)
 Packet Tracer cannot start other programs, so this is not a real button.
 1. Save and close this lab.   2. Double click "Start NetCheck.command"
 (in the tools folder). The page opens at http://127.0.0.1:8765
@@ -204,7 +204,7 @@ def positions():
 
 def boxes():
     """(left, top, right, bottom, colour) of every coloured box."""
-    found = [(LAYER_LEFT, y - 65, LAYER_RIGHT, y + 65, colour) for y, colour, devices in LAYERS]
+    found = [(LAYER_LEFT, y - 70, LAYER_RIGHT, y + 70, colour) for y, colour, devices in LAYERS]
     for number, (title, switch, colour, pcs) in enumerate(ROOMS):
         left = FIRST_ROOM_LEFT + number * ROOM_STEP
         found.append((left, ROOMS_TOP, left + ROOM_WIDTH, ROOMS_BOTTOM, colour))

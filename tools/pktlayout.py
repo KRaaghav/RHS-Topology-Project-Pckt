@@ -177,6 +177,12 @@ IT-PC1 10.10.99.50, IT-PC2 10.10.99.51. Switch management: 10.10.99.11-16 rooms,
 README.md explains every design choice, WALKTHROUGH.md builds it step by step.
 configs/ has the config of every device with comments. tools/ has the Python programs
 that check the addressing plan and write config changes straight into this file."""),
+
+    (3000, 1560, """CHANGE CONFIGS WITH BUTTONS (NetCheck)
+Packet Tracer cannot start other programs, so this is not a real button.
+1. Save and close this lab.   2. Double click "Start NetCheck.command"
+(in the tools folder). The page opens at http://127.0.0.1:8765
+3. Make the change there, then press "Open in Packet Tracer" on the page."""),
 ]
 
 

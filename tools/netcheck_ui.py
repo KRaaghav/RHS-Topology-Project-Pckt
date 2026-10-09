@@ -23,6 +23,8 @@ import contextlib
 import io
 import json
 import os
+import subprocess
+import sys
 import webbrowser
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
@@ -119,6 +121,17 @@ def lab_overview():
             "file": os.path.basename(pktconfig.LAB)}
 
 
+def open_lab():
+    """Open the lab file the same way a double click on it would."""
+    lab = os.path.abspath(pktconfig.LAB)
+    if sys.platform == "darwin":
+        subprocess.run(["open", lab], check=False)
+    elif sys.platform == "win32":
+        os.startfile(lab)
+    else:
+        subprocess.run(["xdg-open", lab], check=False)
+
+
 def action(path, body):
     """Everything the page can ask for with a POST. Returns something json can pack."""
     if path == "/preview":
@@ -136,6 +149,9 @@ def action(path, body):
     if path == "/restore":
         kept = pktconfig.restore(body.get("backup", ""))
         return {"message": f"{body.get('backup')} is the lab again. The lab from just before was kept as {kept}."}
+    if path == "/open":
+        open_lab()
+        return {"message": "Opening the lab in Packet Tracer."}
     if path == "/layout":
         report = pktlayout.arrange()
         return {"message": next(line for line in report if line.startswith("Written")).replace(
@@ -240,6 +256,7 @@ PAGE = r"""<!doctype html>
         <input id="lab-filter" placeholder="Filter devices or VLANs" style="width:210px" oninput="drawLab()">
         <button class="ghost small" onclick="loadLab(true)">Refresh</button>
         <button class="ghost small" onclick="arrange()">Tidy the canvas</button>
+        <button class="small" onclick="openLab()">Open in Packet Tracer</button>
       </div>
     </div>
     <div id="lab-body"><p class="empty">Reading the lab file...</p></div>
@@ -488,6 +505,11 @@ PAGE = r"""<!doctype html>
     if (!confirm('Put every device back on the grid and rewrite the boxes and notes on the canvas?' + NL + NL +
                  'Close the lab in Packet Tracer first. Device configs are not touched.')) return;
     const reply = await ask('/layout');
+    toast(reply.error || reply.message);
+  }
+
+  async function openLab() {
+    const reply = await ask('/open');
     toast(reply.error || reply.message);
   }
 

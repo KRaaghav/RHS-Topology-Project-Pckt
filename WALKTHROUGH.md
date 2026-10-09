@@ -331,15 +331,20 @@ The programs are in `tools/`. They need Python 3, which is already on a Mac. Not
 ### With buttons
 
 Double click `Start NetCheck.command` in the `tools` folder (or run `python3 netcheck_ui.py`).
-A page opens in the browser with two tabs:
+A page opens in the browser with four tabs:
 
+- **Lab** - every router and switch that is inside the Packet Tracer file, by layer, with its
+  VLANs. Click one to read its running config (there is a search box). The green dot means the
+  config in the lab is the same as the file in `configs/`. "Tidy the canvas" runs `pktlayout.py`
+- **Configure** - click a device group (all access switches, both distribution switches, ...)
+  or single devices, pick a change from the drop-down, fill in the boxes. **Preview** shows the
+  commands for each device and, next to them, the lines that would change in the lab.
+  **Write to the lab** puts the change into the lab file itself. "Save scripts only" just writes
+  the scripts to a `changes` folder
 - **Checks** - subnet calculator, check the plan, check the inventory, compare two configs,
   make a config for a new room switch
-- **Configure devices** - pick a device group from the drop-down (all access switches, both
-  distribution switches, ...), tick or untick single devices, pick a change from the second
-  drop-down, fill in the boxes. Preview shows one script per device. Save also writes them to a
-  `changes` folder with a log. **Write to the Packet Tracer lab** puts the change into the lab
-  file itself.
+- **History** - every change that was made, and the copies of the lab from before each one.
+  **Restore** puts the lab and the `configs` folder back (undo)
 
 Packet Tracer devices cannot be reached over the network from outside Packet Tracer. But the
 whole lab is one file, and the running config of every device is in it. So "Write to the

@@ -8,12 +8,14 @@ switch. This program opens the file (with pktfile.py), changes the configs in it
 IOS would if the commands were typed in, and saves the file again. Open the lab in
 Packet Tracer afterwards and the devices come up with the new config.
 
-It does four things:
+It does six things:
 
   list     the routers and switches in the lab
   show     print the running config of one device, as stored in the lab
   check    compare every config in the lab with the files in ../configs
   apply    put configuration commands into one or more devices
+  backups  list the copies of the lab that were kept before each change
+  restore  put one of those copies back (undo)
 
 Examples:
 
@@ -23,6 +25,8 @@ Examples:
   python3 pktconfig.py apply SW-E230 mychange.txt
   python3 pktconfig.py apply ../changes/2026-10-08_210000_add-a-vlan-40-guest
   python3 pktconfig.py apply SW-E230 mychange.txt --dry-run
+  python3 pktconfig.py backups
+  python3 pktconfig.py restore 2026-10-08_214007.pkt
 
 "apply" with a folder uses every <device>.txt file in it (the folders that netconfig.py
 makes). --dry-run shows what would change and writes nothing. --lab "other file.pkt"
@@ -629,6 +633,64 @@ def packet_tracer_is_open():
         return False                               # no pgrep (Windows): cannot tell
 
 
+def backup_lab(lab_path=LAB):
+    """Keep a copy of the lab in ../changes/backups before it is changed. For the project's
+    own lab the configs folder is copied too, so restore() can put both back.
+    Returns the file name of the copy."""
+    os.makedirs(BACKUPS, exist_ok=True)
+    stamp = datetime.datetime.now().strftime("%Y-%m-%d_%H%M%S")
+    name = stamp
+    extra = 1
+    while os.path.exists(os.path.join(BACKUPS, name + ".pkt")):    # two changes in the same second
+        extra += 1
+        name = f"{stamp}-{extra}"
+    shutil.copy2(lab_path, os.path.join(BACKUPS, name + ".pkt"))
+    if os.path.abspath(lab_path) == os.path.abspath(LAB) and os.path.isdir(CONFIGS):
+        shutil.copytree(CONFIGS, os.path.join(BACKUPS, name + ".configs"))
+    return name + ".pkt"
+
+
+def backups():
+    """Names of the kept copies, newest first."""
+    if not os.path.isdir(BACKUPS):
+        return []
+    return sorted((f for f in os.listdir(BACKUPS) if f.endswith(".pkt")), reverse=True)
+
+
+def restore(name, lab_path=LAB):
+    """Put a kept copy back. The lab as it is now is kept as a new copy first, so a
+    restore can be undone too. Returns the name of that new copy."""
+    source = os.path.join(BACKUPS, name)
+    if not re.fullmatch(r"[\w\-]+\.pkt", name) or not os.path.exists(source):
+        raise Problem(f"There is no backup called {name}.")
+    Lab(source)                                    # stops here if the copy cannot be read
+    kept = backup_lab(lab_path)
+    shutil.copy2(source, lab_path)
+    old_configs = source[:-4] + ".configs"
+    if os.path.abspath(lab_path) == os.path.abspath(LAB) and os.path.isdir(old_configs):
+        for file_name in os.listdir(old_configs):
+            shutil.copy2(os.path.join(old_configs, file_name), os.path.join(CONFIGS, file_name))
+    return kept
+
+
+def overview(lab_path=LAB):
+    """One dict per router and switch in the lab: name, config lines, VLANs, and whether
+    its config is the same as the file in ../configs."""
+    lab = Lab(lab_path)
+    rows = []
+    for name in lab.names():
+        config = lab.config(name)
+        path = os.path.join(CONFIGS, name + ".txt")
+        same = None
+        if os.path.exists(path):
+            with open(path) as f:
+                same = without_comments(f.read().splitlines()) == without_comments(config)
+        hostname = next((l.split(None, 1)[1] for l in config if l.startswith("hostname ")), name)
+        rows.append({"name": name, "hostname": hostname, "lines": len(config), "same_as_file": same,
+                     "vlans": {n: v for n, v in sorted(lab.vlans(name).items()) if n not in (1, 1002, 1003, 1004, 1005)}})
+    return rows
+
+
 def update_config_file(name, script):
     """Give ../configs/<name>.txt the same change, keeping its comment lines."""
     path = os.path.join(CONFIGS, name + ".txt")
@@ -677,9 +739,7 @@ def apply(scripts, lab_path=LAB, write=True):
 
     backup = None
     if write:
-        os.makedirs(BACKUPS, exist_ok=True)
-        backup = datetime.datetime.now().strftime("%Y-%m-%d_%H%M%S") + ".pkt"
-        shutil.copy2(lab_path, os.path.join(BACKUPS, backup))
+        backup = backup_lab(lab_path)
         lab.save()
         if os.path.abspath(lab_path) == os.path.abspath(LAB):
             for name, script in scripts.items():
@@ -781,6 +841,13 @@ def main(args):
             return check(lab_path)
         if args and args[0] == "apply":
             return apply_command(lab_path, args[1:], write)
+        if args == ["backups"]:
+            print("\n".join(backups()) or "No backups yet.")
+            return 0
+        if len(args) == 2 and args[0] == "restore":
+            kept = restore(args[1], lab_path)
+            print(f"{args[1]} is the lab again. The lab from just before is in changes/backups/{kept}")
+            return 0
     except Problem as err:
         print("Problem:", err)
         return 1

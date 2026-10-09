@@ -369,6 +369,15 @@ def apply(device_names, change_id, values):
     return title, scripts, notes, write_files(title, scripts, "yes"), result["changes"]
 
 
+def history():
+    """The lines of ../changes/log.csv as dicts, newest first."""
+    path = os.path.join(CHANGES, "log.csv")
+    if not os.path.exists(path):
+        return []
+    with open(path, newline="") as f:
+        return list(csv.DictReader(f))[::-1]
+
+
 def write_files(title, scripts, in_lab):
     """Save the scripts and add a line to the log. Returns the name of the new folder."""
     now = datetime.datetime.now()

@@ -22,16 +22,14 @@ before is kept in ../changes/backups.
 Only uses the Python standard library, nothing to install.
 """
 
-import datetime
 import html
 import os
 import re
-import shutil
 import sys
 import uuid
 
 import pktfile
-from pktconfig import BACKUPS, LAB, Problem, packet_tracer_is_open
+from pktconfig import LAB, Problem, backup_lab, packet_tracer_is_open
 
 # ---------------------------------------------------------------- where everything goes
 # All numbers are pixels on the canvas. A device position is the middle of its icon.
@@ -325,9 +323,7 @@ def arrange(lab_path=LAB, write=True):
     report.append(f"{moved} device(s) moved, {len(boxes())} boxes, {len(notes())} notes, description written.")
 
     if write:
-        os.makedirs(BACKUPS, exist_ok=True)
-        backup = datetime.datetime.now().strftime("%Y-%m-%d_%H%M%S") + ".pkt"
-        shutil.copy2(lab_path, os.path.join(BACKUPS, backup))
+        backup = backup_lab(lab_path)
         pktfile.write_pkt(lab_path + ".tmp", xml.encode("utf-8"))
         os.replace(lab_path + ".tmp", lab_path)
         report.append(f"Written to {os.path.basename(lab_path)}. The file from before is in changes/backups/{backup}")

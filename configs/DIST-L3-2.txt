@@ -1,0 +1,408 @@
+!
+version 16.3.2
+service timestamps log datetime msec
+service timestamps debug datetime msec
+! ---- Hide plain text passwords in the config
+service password-encryption
+!
+! ---- Name of the device (shows in the prompt)
+hostname DIST-L3-2
+!
+!
+!
+no profinet
+! ---- Password for privileged mode (enable). Stored as a hash, the real one is RHSenable
+enable secret 5 $1$mERr$dhyo12P3gD/LuaJsTJfgG.
+!
+!
+!
+!
+!
+!
+no ip cef
+! ---- Turn the switch into a layer 3 switch so it can route
+ip routing
+!
+no ipv6 cef
+! ---- Allow IPv6 routing
+ipv6 unicast-routing
+!
+!
+!
+! ---- Local account used for console and SSH logins (admin / RHSadmin)
+username admin privilege 15 secret 5 $1$mERr$HgPFa9obd/gt/7YMiEzUm/
+!
+!
+!
+! ---- SSH setup. Needs a domain name, and "crypto key generate rsa" typed once on the device
+ip ssh version 2
+no ip domain-lookup
+ip domain-name rhs.lab
+!
+!
+! ---- LLDP so "show lldp neighbors" shows what is plugged in where
+lldp run
+!
+! ---- Rapid PVST+, one fast spanning tree per VLAN
+spanning-tree mode rapid-pvst
+! ---- Root bridge priorities. Lower wins. This matches which switch is the HSRP active gateway
+spanning-tree vlan 20,30 priority 24576
+spanning-tree vlan 10,70,99,101 priority 28672
+!
+!
+!
+! ---- Loopback: always up, used as the OSPF router ID
+interface Loopback0
+ description Router ID
+ ip address 10.10.255.6 255.255.255.255
+!
+! ---- EtherChannel (logical port). The physical member ports below have channel-group
+interface Port-channel1
+ description LACP trunk to DIST-L3-1
+ switchport trunk native vlan 999
+ switchport trunk allowed vlan 10,20,30,70,99,101
+ switchport mode trunk
+ switchport nonegotiate
+!
+interface Port-channel2
+ description MDF - LACP trunk to SW-MDF Po2
+ switchport trunk native vlan 999
+ switchport trunk allowed vlan 70,99
+ switchport mode trunk
+ switchport nonegotiate
+!
+! ---- Routed ports: no switchport turns a switch port into a router port with an IP
+interface GigabitEthernet1/0/1
+ description MDF - uplink to CORE-L3-1 Gi1/0/6
+ no switchport
+ ip address 10.10.0.26 255.255.255.252
+ ip ospf network point-to-point
+ ip ospf hello-interval 2
+ ip ospf dead-interval 8
+ duplex auto
+ speed auto
+ ipv6 address 2001:DB8:10:F7::2/64
+!
+! ---- EtherChannel member ports (LACP, mode active)
+interface GigabitEthernet1/0/2
+ description Po1 member to DIST-L3-1 Gi1/0/2
+ switchport trunk native vlan 999
+ switchport trunk allowed vlan 10,20,30,70,99,101
+ switchport mode trunk
+ switchport nonegotiate
+ channel-group 1 mode active
+!
+interface GigabitEthernet1/0/3
+ description Po1 member to DIST-L3-1 Gi1/0/3
+ switchport trunk native vlan 999
+ switchport trunk allowed vlan 10,20,30,70,99,101
+ switchport mode trunk
+ switchport nonegotiate
+ channel-group 1 mode active
+!
+! ---- Routed ports: no switchport turns a switch port into a router port with an IP
+interface GigabitEthernet1/0/4
+ description MDF - uplink to CORE-L3-2 Gi1/0/6
+ no switchport
+ ip address 10.10.0.34 255.255.255.252
+ ip ospf network point-to-point
+ ip ospf hello-interval 2
+ ip ospf dead-interval 8
+ duplex auto
+ speed auto
+ ipv6 address 2001:DB8:10:F9::2/64
+!
+! ---- Trunk ports: native VLAN 999 (unused), only the needed VLANs allowed, DTP off
+interface GigabitEthernet1/0/5
+ description Room E230 - trunk to SW-E230 Gi0/2
+ switchport trunk native vlan 999
+ switchport trunk allowed vlan 10,20,99
+ switchport mode trunk
+ switchport nonegotiate
+!
+interface GigabitEthernet1/0/6
+ description Room E110 - trunk to SW-E110 Gi0/2
+ switchport trunk native vlan 999
+ switchport trunk allowed vlan 10,20,99
+ switchport mode trunk
+ switchport nonegotiate
+!
+interface GigabitEthernet1/0/7
+ description Room E103 - trunk to SW-E103 Gi0/2
+ switchport trunk native vlan 999
+ switchport trunk allowed vlan 10,20,99
+ switchport mode trunk
+ switchport nonegotiate
+!
+interface GigabitEthernet1/0/8
+ description Room E203 - trunk to SW-E203 Gi0/2
+ switchport trunk native vlan 999
+ switchport trunk allowed vlan 10,20,99
+ switchport mode trunk
+ switchport nonegotiate
+!
+interface GigabitEthernet1/0/9
+ description Room C214 - trunk to SW-C214 Gi0/2
+ switchport trunk native vlan 999
+ switchport trunk allowed vlan 10,20,99
+ switchport mode trunk
+ switchport nonegotiate
+!
+interface GigabitEthernet1/0/10
+ description Room B126 - trunk to SW-B126 Gi0/2
+ switchport trunk native vlan 999
+ switchport trunk allowed vlan 10,20,99
+ switchport mode trunk
+ switchport nonegotiate
+!
+interface GigabitEthernet1/0/11
+ description Main Office - trunk to SW-OFFICE Gi1/0/24
+ switchport trunk native vlan 999
+ switchport trunk allowed vlan 30,99
+ switchport mode trunk
+ switchport nonegotiate
+!
+! ---- EtherChannel member ports (LACP, mode active)
+interface GigabitEthernet1/0/12
+ description MDF - Po2 member to SW-MDF Gi1/0/23
+ switchport trunk native vlan 999
+ switchport trunk allowed vlan 70,99
+ switchport mode trunk
+ switchport nonegotiate
+ channel-group 2 mode active
+!
+interface GigabitEthernet1/0/13
+ description MDF - Po2 member to SW-MDF Gi1/0/24
+ switchport trunk native vlan 999
+ switchport trunk allowed vlan 70,99
+ switchport mode trunk
+ switchport nonegotiate
+ channel-group 2 mode active
+!
+! ---- Unused ports: put in parking VLAN 998 and shut down
+interface GigabitEthernet1/0/14
+ switchport access vlan 998
+ switchport mode access
+ shutdown
+!
+interface GigabitEthernet1/0/15
+ switchport access vlan 998
+ switchport mode access
+ shutdown
+!
+interface GigabitEthernet1/0/16
+ switchport access vlan 998
+ switchport mode access
+ shutdown
+!
+interface GigabitEthernet1/0/17
+ switchport access vlan 998
+ switchport mode access
+ shutdown
+!
+interface GigabitEthernet1/0/18
+ switchport access vlan 998
+ switchport mode access
+ shutdown
+!
+interface GigabitEthernet1/0/19
+ switchport access vlan 998
+ switchport mode access
+ shutdown
+!
+interface GigabitEthernet1/0/20
+ switchport access vlan 998
+ switchport mode access
+ shutdown
+!
+interface GigabitEthernet1/0/21
+ switchport access vlan 998
+ switchport mode access
+ shutdown
+!
+interface GigabitEthernet1/0/22
+ switchport access vlan 998
+ switchport mode access
+ shutdown
+!
+interface GigabitEthernet1/0/23
+ switchport access vlan 998
+ switchport mode access
+ shutdown
+!
+interface GigabitEthernet1/0/24
+ switchport access vlan 998
+ switchport mode access
+ shutdown
+!
+interface GigabitEthernet1/1/1
+ switchport access vlan 998
+ switchport mode access
+ shutdown
+!
+interface GigabitEthernet1/1/2
+ switchport access vlan 998
+ switchport mode access
+ shutdown
+!
+interface GigabitEthernet1/1/3
+ switchport access vlan 998
+ switchport mode access
+ shutdown
+!
+interface GigabitEthernet1/1/4
+ switchport access vlan 998
+ switchport mode access
+ shutdown
+!
+! ---- VLAN 1 is not used
+interface Vlan1
+ no ip address
+ shutdown
+!
+! ---- SVIs: the gateway for each VLAN. standby = HSRP (shared .1 address), ip helper-address = DHCP relay, ip access-group = ACL
+interface Vlan10
+ description STUDENTS
+ ip address 10.10.8.3 255.255.252.0
+ ip helper-address 10.10.70.5
+ ip access-group STUDENTS-IN in
+ standby version 2
+ standby 10 ip 10.10.8.1
+ standby 10 preempt
+!
+interface Vlan20
+ description TEACHERS
+ ip address 10.10.20.3 255.255.255.0
+ ip helper-address 10.10.70.5
+ ip access-group TEACHERS-IN in
+ standby version 2
+ standby 20 ip 10.10.20.1
+ standby 20 priority 110
+ standby 20 preempt
+!
+interface Vlan30
+ description MANAGEMENT
+ ip address 10.10.30.3 255.255.255.0
+ ip helper-address 10.10.70.5
+ ip access-group MANAGEMENT-IN in
+ standby version 2
+ standby 30 ip 10.10.30.1
+ standby 30 priority 110
+ standby 30 preempt
+!
+interface Vlan70
+ description SERVERS
+ ip address 10.10.70.3 255.255.255.0
+ ip access-group SERVERS-IN in
+ ipv6 address 2001:DB8:10:70::3/64
+ standby version 2
+ standby 70 ip 10.10.70.1
+ standby 70 preempt
+!
+interface Vlan99
+ description NETWORK-IT
+ ip address 10.10.99.3 255.255.255.0
+ ipv6 address 2001:DB8:10:99::3/64
+ standby version 2
+ standby 99 ip 10.10.99.1
+ standby 99 preempt
+!
+! ---- Small routed VLAN between the two switches of this layer (OSPF runs on it)
+interface Vlan101
+ description DIST-TRANSIT to DIST-L3-1
+ ip address 10.10.0.38 255.255.255.252
+ ipv6 address 2001:DB8:10:FA::2/64
+!
+! ---- OSPF, single area 0. Only the links to other routers send hellos, everything else is passive
+router ospf 1
+ router-id 10.10.255.6
+ log-adjacency-changes
+ passive-interface default
+ no passive-interface GigabitEthernet1/0/1
+ no passive-interface GigabitEthernet1/0/4
+ no passive-interface Vlan101
+ network 10.10.0.0 0.0.255.255 area 0
+!
+ip classless
+!
+! ---- IPv6 static routes. The ones ending in 5 are floating backups (higher administrative distance)
+ipv6 route ::/0 2001:DB8:10:F7::1
+ipv6 route ::/0 2001:DB8:10:F9::1 5
+!
+! ---- Standard ACL 10: only the Network IT VLAN may SSH in (used by access-class on the vty lines)
+access-list 10 permit 10.10.99.0 0.0.0.255
+! ---- Students: DHCP, DNS and the school website are allowed, the rest of the school (10.0.0.0/8) is blocked, internet is allowed
+ip access-list extended STUDENTS-IN
+ permit udp any eq 68 any eq 67
+ permit icmp any 10.10.8.0 0.0.0.3
+ permit udp any host 10.10.70.10 eq 53
+ permit tcp any host 10.10.70.10 eq 80
+ permit tcp any host 10.10.70.10 eq 443
+ permit icmp any 10.10.20.0 0.0.0.255 echo-reply
+ permit icmp any 10.10.99.0 0.0.0.255 echo-reply
+ permit tcp any 10.10.99.0 0.0.0.255 established
+ deny ip any 10.0.0.0 0.255.255.255
+ permit ip any any
+! ---- Teachers: blocked from the management and IT VLANs (replies to them are still allowed)
+ip access-list extended TEACHERS-IN
+ permit udp any eq 68 any eq 67
+ permit icmp any 10.10.30.0 0.0.0.255 echo-reply
+ permit tcp any 10.10.30.0 0.0.0.255 established
+ permit icmp any 10.10.99.0 0.0.0.255 echo-reply
+ permit tcp any 10.10.99.0 0.0.0.255 established
+ deny ip any 10.10.30.0 0.0.0.255
+ deny ip any 10.10.99.0 0.0.0.255
+ permit ip any any
+! ---- Management: blocked from the IT VLAN only
+ip access-list extended MANAGEMENT-IN
+ permit udp any eq 68 any eq 67
+ permit icmp any 10.10.99.0 0.0.0.255 echo-reply
+ permit tcp any 10.10.99.0 0.0.0.255 established
+ deny ip any 10.10.99.0 0.0.0.255
+ permit ip any any
+! ---- Servers: may only answer (established / replies), a server cannot start a connection into the school
+ip access-list extended SERVERS-IN
+ permit udp host 10.10.70.5 eq 67 any
+ permit tcp any any established
+ permit tcp host 10.10.70.30 eq 20 any
+ permit icmp any any echo-reply
+ permit udp host 10.10.70.10 eq 53 any
+ permit udp host 10.10.70.20 eq 123 any
+ permit icmp any 10.10.70.0 0.0.0.3
+ deny ip any 10.0.0.0 0.255.255.255
+ permit ip any any
+!
+!
+! ---- Warning shown before login
+banner motd ^CRHS campus network (lab design). Authorized users only - activity is logged.^C
+!
+! ---- Send logs to the syslog server SRV-LOG
+logging trap debugging
+logging 10.10.70.20
+!
+! ---- Read only SNMP community
+snmp-server community RHS-RO RO
+!
+! ---- Console port: asks for the local username and password
+line con 0
+ exec-timeout 15 0
+ logging synchronous
+ login local
+!
+! ---- Remote access: SSH only, local login, limited by ACL 10
+line vty 0 4
+ access-class 10 in
+ exec-timeout 10 0
+ login local
+ transport input ssh
+line vty 5 15
+ access-class 10 in
+ exec-timeout 10 0
+ login local
+ transport input ssh
+!
+! ---- Get the time from SRV-LOG so log timestamps match
+ntp server 10.10.70.20
+!
+end
+

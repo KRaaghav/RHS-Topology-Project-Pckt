@@ -1,0 +1,340 @@
+!
+version 15.0
+service timestamps log datetime msec
+service timestamps debug datetime msec
+! ---- Hide plain text passwords in the config
+service password-encryption
+!
+! ---- Name of the device (shows in the prompt)
+hostname SW-E103
+!
+!
+!
+! ---- Password for privileged mode (enable). Stored as a hash, the real one is RHSenable
+enable secret 5 $1$mERr$dhyo12P3gD/LuaJsTJfgG.
+!
+!
+!
+!
+! ---- DHCP snooping: only trusted ports (the uplinks) may answer DHCP, stops fake DHCP servers
+ip dhcp snooping vlan 10,20
+no ip dhcp snooping information option
+ip dhcp snooping
+!
+! ---- SSH setup. Needs a domain name, and "crypto key generate rsa" typed once on the device
+ip ssh version 2
+no ip domain-lookup
+ip domain-name rhs.lab
+!
+! ---- Local account used for console and SSH logins (admin / RHSadmin)
+username admin privilege 15 secret 5 $1$mERr$HgPFa9obd/gt/7YMiEzUm/
+!
+!
+! ---- LLDP so "show lldp neighbors" shows what is plugged in where
+lldp run
+!
+! ---- Rapid PVST+, one fast spanning tree per VLAN
+spanning-tree mode rapid-pvst
+spanning-tree extend system-id
+!
+! ---- Access ports for PCs: one VLAN, port security (2 MACs, sticky), PortFast + BPDU guard
+interface FastEthernet0/1
+ description Room E103 - student PC 01
+ switchport access vlan 10
+ switchport mode access
+ switchport port-security
+ switchport port-security maximum 2
+ switchport port-security mac-address sticky
+ switchport port-security violation restrict
+ ip dhcp snooping limit rate 15
+ spanning-tree portfast
+ spanning-tree bpduguard enable
+!
+interface FastEthernet0/2
+ description Room E103 - student PC 02
+ switchport access vlan 10
+ switchport mode access
+ switchport port-security
+ switchport port-security maximum 2
+ switchport port-security mac-address sticky
+ switchport port-security violation restrict
+ ip dhcp snooping limit rate 15
+ spanning-tree portfast
+ spanning-tree bpduguard enable
+!
+interface FastEthernet0/3
+ description Room E103 - student PC 03
+ switchport access vlan 10
+ switchport mode access
+ switchport port-security
+ switchport port-security maximum 2
+ switchport port-security mac-address sticky
+ switchport port-security violation restrict
+ ip dhcp snooping limit rate 15
+ spanning-tree portfast
+ spanning-tree bpduguard enable
+!
+interface FastEthernet0/4
+ description Room E103 - student PC 04
+ switchport access vlan 10
+ switchport mode access
+ switchport port-security
+ switchport port-security maximum 2
+ switchport port-security mac-address sticky
+ switchport port-security violation restrict
+ ip dhcp snooping limit rate 15
+ spanning-tree portfast
+ spanning-tree bpduguard enable
+!
+interface FastEthernet0/5
+ description Room E103 - student PC 05
+ switchport access vlan 10
+ switchport mode access
+ switchport port-security
+ switchport port-security maximum 2
+ switchport port-security mac-address sticky
+ switchport port-security violation restrict
+ ip dhcp snooping limit rate 15
+ spanning-tree portfast
+ spanning-tree bpduguard enable
+!
+interface FastEthernet0/6
+ description Room E103 - student PC 06
+ switchport access vlan 10
+ switchport mode access
+ switchport port-security
+ switchport port-security maximum 2
+ switchport port-security mac-address sticky
+ switchport port-security violation restrict
+ ip dhcp snooping limit rate 15
+ spanning-tree portfast
+ spanning-tree bpduguard enable
+!
+interface FastEthernet0/7
+ description Room E103 - student PC 07
+ switchport access vlan 10
+ switchport mode access
+ switchport port-security
+ switchport port-security maximum 2
+ switchport port-security mac-address sticky
+ switchport port-security violation restrict
+ ip dhcp snooping limit rate 15
+ spanning-tree portfast
+ spanning-tree bpduguard enable
+!
+interface FastEthernet0/8
+ description Room E103 - student PC 08
+ switchport access vlan 10
+ switchport mode access
+ switchport port-security
+ switchport port-security maximum 2
+ switchport port-security mac-address sticky
+ switchport port-security violation restrict
+ ip dhcp snooping limit rate 15
+ spanning-tree portfast
+ spanning-tree bpduguard enable
+!
+interface FastEthernet0/9
+ description Room E103 - student PC 09
+ switchport access vlan 10
+ switchport mode access
+ switchport port-security
+ switchport port-security maximum 2
+ switchport port-security mac-address sticky
+ switchport port-security violation restrict
+ ip dhcp snooping limit rate 15
+ spanning-tree portfast
+ spanning-tree bpduguard enable
+!
+interface FastEthernet0/10
+ description Room E103 - student PC 10
+ switchport access vlan 10
+ switchport mode access
+ switchport port-security
+ switchport port-security maximum 2
+ switchport port-security mac-address sticky
+ switchport port-security violation restrict
+ ip dhcp snooping limit rate 15
+ spanning-tree portfast
+ spanning-tree bpduguard enable
+!
+interface FastEthernet0/11
+ description Room E103 - student PC 11
+ switchport access vlan 10
+ switchport mode access
+ switchport port-security
+ switchport port-security maximum 2
+ switchport port-security mac-address sticky
+ switchport port-security violation restrict
+ ip dhcp snooping limit rate 15
+ spanning-tree portfast
+ spanning-tree bpduguard enable
+!
+interface FastEthernet0/12
+ description Room E103 - student PC 12
+ switchport access vlan 10
+ switchport mode access
+ switchport port-security
+ switchport port-security maximum 2
+ switchport port-security mac-address sticky
+ switchport port-security violation restrict
+ ip dhcp snooping limit rate 15
+ spanning-tree portfast
+ spanning-tree bpduguard enable
+!
+interface FastEthernet0/13
+ description Room E103 - student PC 13
+ switchport access vlan 10
+ switchport mode access
+ switchport port-security
+ switchport port-security maximum 2
+ switchport port-security mac-address sticky
+ switchport port-security violation restrict
+ ip dhcp snooping limit rate 15
+ spanning-tree portfast
+ spanning-tree bpduguard enable
+!
+interface FastEthernet0/14
+ description Room E103 - student PC 14
+ switchport access vlan 10
+ switchport mode access
+ switchport port-security
+ switchport port-security maximum 2
+ switchport port-security mac-address sticky
+ switchport port-security violation restrict
+ ip dhcp snooping limit rate 15
+ spanning-tree portfast
+ spanning-tree bpduguard enable
+!
+interface FastEthernet0/15
+ description Room E103 - student PC 15
+ switchport access vlan 10
+ switchport mode access
+ switchport port-security
+ switchport port-security maximum 2
+ switchport port-security mac-address sticky
+ switchport port-security violation restrict
+ ip dhcp snooping limit rate 15
+ spanning-tree portfast
+ spanning-tree bpduguard enable
+!
+interface FastEthernet0/16
+ description Room E103 - teacher PC
+ switchport access vlan 20
+ switchport mode access
+ switchport port-security
+ switchport port-security maximum 2
+ switchport port-security mac-address sticky
+ switchport port-security violation restrict
+ ip dhcp snooping limit rate 15
+ spanning-tree portfast
+ spanning-tree bpduguard enable
+!
+! ---- Unused ports: put in parking VLAN 998 and shut down
+interface FastEthernet0/17
+ switchport access vlan 998
+ switchport mode access
+ shutdown
+!
+interface FastEthernet0/18
+ switchport access vlan 998
+ switchport mode access
+ shutdown
+!
+interface FastEthernet0/19
+ switchport access vlan 998
+ switchport mode access
+ shutdown
+!
+interface FastEthernet0/20
+ switchport access vlan 998
+ switchport mode access
+ shutdown
+!
+interface FastEthernet0/21
+ switchport access vlan 998
+ switchport mode access
+ shutdown
+!
+interface FastEthernet0/22
+ switchport access vlan 998
+ switchport mode access
+ shutdown
+!
+interface FastEthernet0/23
+ switchport access vlan 998
+ switchport mode access
+ shutdown
+!
+interface FastEthernet0/24
+ switchport access vlan 998
+ switchport mode access
+ shutdown
+!
+! ---- Trunk ports: native VLAN 999 (unused), only the needed VLANs allowed, DTP off
+interface GigabitEthernet0/1
+ description Trunk to DIST-L3-1 Gi1/0/7
+ switchport trunk native vlan 999
+ switchport trunk allowed vlan 10,20,99
+ switchport mode trunk
+ switchport nonegotiate
+ ip dhcp snooping trust
+!
+interface GigabitEthernet0/2
+ description Trunk to DIST-L3-2 Gi1/0/7
+ switchport trunk native vlan 999
+ switchport trunk allowed vlan 10,20,99
+ switchport mode trunk
+ switchport nonegotiate
+ ip dhcp snooping trust
+!
+! ---- VLAN 1 is not used
+interface Vlan1
+ no ip address
+ shutdown
+!
+! ---- Management address of this switch (NETWORK-IT VLAN)
+interface Vlan99
+ description NETWORK-IT management - Room E103
+ ip address 10.10.99.13 255.255.255.0
+!
+! ---- Gateway for the switch itself (layer 2 switch, so it needs one to be managed from another VLAN)
+ip default-gateway 10.10.99.1
+!
+! ---- Standard ACL 10: only the Network IT VLAN may SSH in (used by access-class on the vty lines)
+access-list 10 permit 10.10.99.0 0.0.0.255
+!
+!
+! ---- Warning shown before login
+banner motd ^CRHS campus network (lab design). Authorized users only - activity is logged.^C
+!
+! ---- Send logs to the syslog server SRV-LOG
+logging trap debugging
+logging 10.10.70.20
+!
+! ---- Read only SNMP community
+snmp-server community RHS-RO RO
+!
+! ---- Console port: asks for the local username and password
+line con 0
+ exec-timeout 15 0
+ logging synchronous
+ login local
+!
+! ---- Remote access: SSH only, local login, limited by ACL 10
+line vty 0 4
+ access-class 10 in
+ exec-timeout 10 0
+ login local
+ transport input ssh
+line vty 5 15
+ access-class 10 in
+ exec-timeout 10 0
+ login local
+ transport input ssh
+!
+! ---- Get the time from SRV-LOG so log timestamps match
+ntp server 10.10.70.20
+!
+end
+

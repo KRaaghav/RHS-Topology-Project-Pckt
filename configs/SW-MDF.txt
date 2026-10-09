@@ -1,0 +1,285 @@
+!
+version 16.3.2
+service timestamps log datetime msec
+service timestamps debug datetime msec
+! ---- Hide plain text passwords in the config
+service password-encryption
+!
+! ---- Name of the device (shows in the prompt)
+hostname SW-MDF
+!
+!
+!
+no profinet
+! ---- Password for privileged mode (enable). Stored as a hash, the real one is RHSenable
+enable secret 5 $1$mERr$dhyo12P3gD/LuaJsTJfgG.
+!
+!
+!
+!
+!
+!
+no ip cef
+no ipv6 cef
+!
+!
+!
+! ---- SSH setup. Needs a domain name, and "crypto key generate rsa" typed once on the device
+ip ssh version 2
+no ip domain-lookup
+ip domain-name rhs.lab
+!
+! ---- Local account used for console and SSH logins (admin / RHSadmin)
+username admin privilege 15 secret 5 $1$mERr$HgPFa9obd/gt/7YMiEzUm/
+!
+!
+! ---- LLDP so "show lldp neighbors" shows what is plugged in where
+lldp run
+!
+! ---- Rapid PVST+, one fast spanning tree per VLAN
+spanning-tree mode rapid-pvst
+spanning-tree extend system-id
+!
+! ---- EtherChannel (logical port). The physical member ports below have channel-group
+interface Port-channel1
+ description LACP trunk to DIST-L3-1 Po2
+ switchport trunk native vlan 999
+ switchport trunk allowed vlan 70,99
+ switchport mode trunk
+ switchport nonegotiate
+!
+interface Port-channel2
+ description LACP trunk to DIST-L3-2 Po2
+ switchport trunk native vlan 999
+ switchport trunk allowed vlan 70,99
+ switchport mode trunk
+ switchport nonegotiate
+!
+! ---- Access ports (no port security on server ports)
+interface GigabitEthernet1/0/1
+ description MDF - SRV-DHCP
+ switchport access vlan 70
+ switchport mode access
+ spanning-tree portfast
+ spanning-tree bpduguard enable
+!
+interface GigabitEthernet1/0/2
+ description MDF - SRV-DNS-WEB
+ switchport access vlan 70
+ switchport mode access
+ spanning-tree portfast
+ spanning-tree bpduguard enable
+!
+interface GigabitEthernet1/0/3
+ description MDF - SRV-LOG
+ switchport access vlan 70
+ switchport mode access
+ spanning-tree portfast
+ spanning-tree bpduguard enable
+!
+interface GigabitEthernet1/0/4
+ description MDF - SRV-FILE
+ switchport access vlan 70
+ switchport mode access
+ spanning-tree portfast
+ spanning-tree bpduguard enable
+!
+! ---- Unused ports: put in parking VLAN 998 and shut down
+interface GigabitEthernet1/0/5
+ switchport access vlan 998
+ switchport mode access
+ shutdown
+!
+interface GigabitEthernet1/0/6
+ switchport access vlan 998
+ switchport mode access
+ shutdown
+!
+interface GigabitEthernet1/0/7
+ switchport access vlan 998
+ switchport mode access
+ shutdown
+!
+interface GigabitEthernet1/0/8
+ switchport access vlan 998
+ switchport mode access
+ shutdown
+!
+interface GigabitEthernet1/0/9
+ switchport access vlan 998
+ switchport mode access
+ shutdown
+!
+interface GigabitEthernet1/0/10
+ switchport access vlan 998
+ switchport mode access
+ shutdown
+!
+! ---- Access ports for PCs: one VLAN, port security (2 MACs, sticky), PortFast + BPDU guard
+interface GigabitEthernet1/0/11
+ description IT Office - IT-PC1
+ switchport access vlan 99
+ switchport mode access
+ switchport port-security
+ switchport port-security maximum 2
+ switchport port-security mac-address sticky
+ switchport port-security violation restrict
+ spanning-tree portfast
+ spanning-tree bpduguard enable
+!
+interface GigabitEthernet1/0/12
+ description IT Office - IT-PC2
+ switchport access vlan 99
+ switchport mode access
+ switchport port-security
+ switchport port-security maximum 2
+ switchport port-security mac-address sticky
+ switchport port-security violation restrict
+ spanning-tree portfast
+ spanning-tree bpduguard enable
+!
+! ---- Unused ports: put in parking VLAN 998 and shut down
+interface GigabitEthernet1/0/13
+ switchport access vlan 998
+ switchport mode access
+ shutdown
+!
+interface GigabitEthernet1/0/14
+ switchport access vlan 998
+ switchport mode access
+ shutdown
+!
+interface GigabitEthernet1/0/15
+ switchport access vlan 998
+ switchport mode access
+ shutdown
+!
+interface GigabitEthernet1/0/16
+ switchport access vlan 998
+ switchport mode access
+ shutdown
+!
+interface GigabitEthernet1/0/17
+ switchport access vlan 998
+ switchport mode access
+ shutdown
+!
+interface GigabitEthernet1/0/18
+ switchport access vlan 998
+ switchport mode access
+ shutdown
+!
+interface GigabitEthernet1/0/19
+ switchport access vlan 998
+ switchport mode access
+ shutdown
+!
+interface GigabitEthernet1/0/20
+ switchport access vlan 998
+ switchport mode access
+ shutdown
+!
+! ---- EtherChannel member ports (LACP, mode active)
+interface GigabitEthernet1/0/21
+ description Po1 member to DIST-L3-1 Gi1/0/12
+ switchport trunk native vlan 999
+ switchport trunk allowed vlan 70,99
+ switchport mode trunk
+ switchport nonegotiate
+ channel-group 1 mode active
+!
+interface GigabitEthernet1/0/22
+ description Po1 member to DIST-L3-1 Gi1/0/13
+ switchport trunk native vlan 999
+ switchport trunk allowed vlan 70,99
+ switchport mode trunk
+ switchport nonegotiate
+ channel-group 1 mode active
+!
+interface GigabitEthernet1/0/23
+ description Po2 member to DIST-L3-2 Gi1/0/12
+ switchport trunk native vlan 999
+ switchport trunk allowed vlan 70,99
+ switchport mode trunk
+ switchport nonegotiate
+ channel-group 2 mode active
+!
+interface GigabitEthernet1/0/24
+ description Po2 member to DIST-L3-2 Gi1/0/13
+ switchport trunk native vlan 999
+ switchport trunk allowed vlan 70,99
+ switchport mode trunk
+ switchport nonegotiate
+ channel-group 2 mode active
+!
+! ---- Unused ports: put in parking VLAN 998 and shut down
+interface GigabitEthernet1/1/1
+ switchport access vlan 998
+ switchport mode access
+ shutdown
+!
+interface GigabitEthernet1/1/2
+ switchport access vlan 998
+ switchport mode access
+ shutdown
+!
+interface GigabitEthernet1/1/3
+ switchport access vlan 998
+ switchport mode access
+ shutdown
+!
+interface GigabitEthernet1/1/4
+ switchport access vlan 998
+ switchport mode access
+ shutdown
+!
+! ---- VLAN 1 is not used
+interface Vlan1
+ no ip address
+ shutdown
+!
+! ---- Management address of this switch (NETWORK-IT VLAN)
+interface Vlan99
+ description NETWORK-IT management - MDF
+ ip address 10.10.99.22 255.255.255.0
+!
+! ---- Gateway for the switch itself (layer 2 switch, so it needs one to be managed from another VLAN)
+ip default-gateway 10.10.99.1
+!
+! ---- Standard ACL 10: only the Network IT VLAN may SSH in (used by access-class on the vty lines)
+access-list 10 permit 10.10.99.0 0.0.0.255
+!
+!
+! ---- Warning shown before login
+banner motd ^CRHS campus network (lab design). Authorized users only - activity is logged.^C
+!
+! ---- Send logs to the syslog server SRV-LOG
+logging trap debugging
+logging 10.10.70.20
+!
+! ---- Read only SNMP community
+snmp-server community RHS-RO RO
+!
+! ---- Console port: asks for the local username and password
+line con 0
+ exec-timeout 15 0
+ logging synchronous
+ login local
+!
+! ---- Remote access: SSH only, local login, limited by ACL 10
+line vty 0 4
+ access-class 10 in
+ exec-timeout 10 0
+ login local
+ transport input ssh
+line vty 5 15
+ access-class 10 in
+ exec-timeout 10 0
+ login local
+ transport input ssh
+!
+! ---- Get the time from SRV-LOG so log timestamps match
+ntp server 10.10.70.20
+!
+end
+

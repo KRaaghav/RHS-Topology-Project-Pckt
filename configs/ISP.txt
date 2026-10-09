@@ -1,0 +1,113 @@
+!
+version 15.1
+service timestamps log datetime msec
+service timestamps debug datetime msec
+! ---- Hide plain text passwords in the config
+service password-encryption
+!
+! ---- Name of the device (shows in the prompt)
+hostname ISP
+!
+!
+!
+! ---- Password for privileged mode (enable). Stored as a hash, the real one is RHSenable
+enable secret 5 $1$mERr$dhyo12P3gD/LuaJsTJfgG.
+!
+!
+!
+!
+ip cef
+! ---- Allow IPv6 routing
+ipv6 unicast-routing
+!
+no ipv6 cef
+!
+!
+! ---- Local account used for console and SSH logins (admin / RHSadmin)
+username admin privilege 15 secret 5 $1$mERr$HgPFa9obd/gt/7YMiEzUm/
+!
+!
+license udi pid CISCO2911/K9 sn FTX1524UEE2-
+!
+!
+! ---- SSH setup. Needs a domain name, and "crypto key generate rsa" typed once on the device
+ip ssh version 2
+no ip domain-lookup
+ip domain-name isp.example.net
+!
+!
+spanning-tree mode pvst
+!
+!
+!
+! ---- Loopback: always up, used as the OSPF router ID
+interface Loopback0
+ description Simulated public host
+ ip address 8.8.8.8 255.255.255.255
+!
+! ---- Interface
+interface GigabitEthernet0/0
+ description To INET-SRV
+ ip address 198.51.100.1 255.255.255.0
+ duplex auto
+ speed auto
+!
+! ---- Unused port
+interface GigabitEthernet0/1
+ no ip address
+ duplex auto
+ speed auto
+ shutdown
+!
+interface GigabitEthernet0/2
+ no ip address
+ duplex auto
+ speed auto
+ shutdown
+!
+! ---- Interface
+interface GigabitEthernet0/0/0
+ description To RHS-EDGE1 (primary)
+ ip address 203.0.113.1 255.255.255.252
+ ipv6 address 2001:DB8:FFFF::1/64
+!
+interface GigabitEthernet0/1/0
+ description To RHS-EDGE2 (backup)
+ ip address 203.0.113.5 255.255.255.252
+ ipv6 address 2001:DB8:FFFE::1/64
+!
+! ---- VLAN 1 is not used
+interface Vlan1
+ no ip address
+ shutdown
+!
+ip classless
+! ---- Static routes
+ip route 203.0.113.8 255.255.255.248 203.0.113.2
+ip route 203.0.113.8 255.255.255.248 203.0.113.6 5
+!
+! ---- IPv6 static routes. The ones ending in 5 are floating backups (higher administrative distance)
+ipv6 route 2001:DB8:10::/48 2001:DB8:FFFF::2
+ipv6 route 2001:DB8:10::/48 2001:DB8:FFFE::2 5
+!
+!
+!
+! ---- Warning shown before login
+banner motd ^CISP network. Authorized users only - activity is logged.^C
+!
+! ---- Console port: asks for the local username and password
+line con 0
+ exec-timeout 15 0
+ logging synchronous
+ login local
+!
+line aux 0
+!
+! ---- Remote access: SSH only, local login, limited by ACL 10
+line vty 0 4
+ exec-timeout 10 0
+ login local
+ transport input ssh
+!
+end
+

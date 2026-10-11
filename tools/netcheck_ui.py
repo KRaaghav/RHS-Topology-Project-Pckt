@@ -13,6 +13,7 @@ The page has four tabs:
 
   Lab        the routers and switches inside the Packet Tracer file, click one to read its config
   Configure  pick devices and a change, see what it would do, write it into the lab
+  Monitor    measurable tests of the lab with a score, and the history of that score
   Checks     subnet calculator, plan and inventory checks, compare configs, new room switch
   History    every change that was made, and the copies of the lab to go back to
 
@@ -28,8 +29,11 @@ import sys
 import webbrowser
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
+import diagram
+import labtest
 import netcheck
 import netconfig
+import pktbuild
 import pktconfig
 import pktlayout
 
@@ -152,6 +156,19 @@ def action(path, body):
     if path == "/open":
         open_lab()
         return {"message": "Opening the lab in Packet Tracer."}
+    if path == "/health":
+        result = labtest.run()
+        if body.get("record"):
+            labtest.record(result)
+        result["history"] = labtest.history()[-40:]
+        return result
+    if path == "/topology":
+        return {"svg": diagram.svg()}
+    if path == "/add-room":
+        report = pktbuild.add_room(body.get("room", ""))
+        with open(diagram.OUT, "w") as f:          # the picture in the README shows the new room too
+            f.write(diagram.svg())
+        return {"message": " ".join(report[:2])}
     if path == "/layout":
         report = pktlayout.arrange()
         return {"message": next(line for line in report if line.startswith("Written")).replace(
@@ -175,7 +192,7 @@ PAGE = r"""<!doctype html>
   * { box-sizing:border-box; }
   body { margin:0; background:var(--bg); color:var(--ink); font:15px/1.5 -apple-system, "Segoe UI", sans-serif; }
   header { position:sticky; top:0; z-index:5; background:var(--card); border-bottom:1px solid var(--line); }
-  .bar { max-width:1120px; margin:0 auto; padding:0 20px; display:flex; align-items:center; gap:22px; flex-wrap:wrap; }
+  .bar { max-width:1240px; margin:0 auto; padding:0 20px; display:flex; align-items:center; gap:22px; flex-wrap:wrap; }
   .brand { font-weight:700; font-size:17px; padding:14px 0; } .brand span { color:var(--accent); }
   nav { display:flex; gap:2px; flex:1; }
   nav button { background:none; border:0; border-bottom:2px solid transparent; color:var(--soft); font:inherit; font-weight:500;
@@ -183,7 +200,7 @@ PAGE = r"""<!doctype html>
   nav button:hover { color:var(--ink); } nav button.on { color:var(--ink); border-bottom-color:var(--accent); }
   .pill { font-size:12.5px; padding:4px 10px; border-radius:99px; background:var(--tint); color:var(--accent); white-space:nowrap; }
   .pill.warn { background:var(--warnbg); color:var(--warn); }
-  main { max-width:1120px; margin:0 auto; padding:26px 20px 60px; }
+  main { max-width:1240px; margin:0 auto; padding:26px 20px 60px; }
   h1 { font-size:21px; margin:0 0 4px; } h2 { font-size:15px; margin:0 0 4px; }
   .sub { margin:0 0 20px; color:var(--soft); }
   h3 { font-size:12px; text-transform:uppercase; letter-spacing:.06em; color:var(--soft); margin:22px 0 8px; font-weight:600; }
@@ -239,6 +256,27 @@ PAGE = r"""<!doctype html>
   #toast { position:fixed; left:50%; bottom:24px; transform:translateX(-50%); background:var(--ink); color:var(--bg); padding:10px 16px;
            border-radius:8px; font-size:14px; max-width:90vw; z-index:20; }
   #toast[hidden] { display:none; }
+  .hero { display:grid; grid-template-columns:minmax(250px, 300px) 1fr; gap:14px; margin-bottom:14px; }
+  @media (max-width:780px) { .hero { grid-template-columns:1fr; } }
+  .score { display:flex; align-items:center; gap:16px; }
+  .ring { width:96px; height:96px; flex:none; } .ring text { font-size:26px; font-weight:700; fill:var(--ink); }
+  .ring .track { stroke:var(--line); } .ring .value { stroke:var(--accent); transition:stroke-dashoffset .6s; } .ring.low .value { stroke:var(--bad); }
+  .tiles { display:grid; grid-template-columns:repeat(auto-fit, minmax(120px, 1fr)); gap:10px; }
+  .tile { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:12px 14px; }
+  .tile b { display:block; font-size:24px; line-height:1.2; } .tile span { color:var(--soft); font-size:12.5px; }
+  #topology { background:#fff; border-radius:8px; overflow:auto; } #topology svg { display:block; min-width:900px; width:100%; height:auto; }
+  #topology .node { cursor:pointer; } #topology .node:hover rect { stroke:#1f6f54; stroke-width:2.6; fill:#e6f2ed; }
+  .test { display:grid; grid-template-columns:22px 1fr 150px 130px; gap:12px; align-items:center; padding:9px 0; border-bottom:1px solid var(--line); }
+  .test:last-child { border-bottom:0; } @media (max-width:780px) { .test { grid-template-columns:22px 1fr; } }
+  .mark { width:20px; height:20px; border-radius:50%; background:var(--accent); color:#fff; font-size:12px; font-weight:700; display:grid; place-items:center; }
+  .mark.bad { background:var(--bad); }
+  .meter { height:8px; border-radius:99px; background:var(--line); overflow:hidden; } .meter i { display:block; height:100%; background:var(--accent); border-radius:99px; }
+  .meter.bad i { background:var(--bad); }
+  .number { text-align:right; font-variant-numeric:tabular-nums; font-size:13.5px; } .number small { color:var(--soft); }
+  .why { grid-column:2 / -1; margin:0; padding:8px 10px; border-radius:7px; background:var(--bg); color:var(--bad); font:12.5px/1.5 ui-monospace, Menlo, monospace;
+         white-space:pre-wrap; }
+  .spark { width:100%; height:70px; display:block; } .spark polyline { fill:none; stroke:var(--accent); stroke-width:2; } .spark circle { fill:var(--accent); }
+  .card + .card.stack, .stack { margin-top:14px; }
 </style>
 </head>
 <body>
@@ -249,12 +287,38 @@ PAGE = r"""<!doctype html>
 </div></header>
 
 <main>
-  <section id="lab">
+  <section id="overview" hidden>
+    <div class="head">
+      <div><h1>Overview</h1><p class="sub" id="over-sub">The lab at a glance.</p></div>
+      <div class="tools">
+        <button class="ghost small" onclick="loadOverview(true)">Refresh</button>
+        <button class="ghost small" onclick="addRoom()">Add a room</button>
+        <button class="small go" style="margin:0" onclick="openLab()">Open in Packet Tracer</button>
+      </div>
+    </div>
+    <div class="hero">
+      <div class="card score">
+        <svg class="ring" id="ring" viewBox="0 0 100 100"><circle class="track" cx="50" cy="50" r="42" fill="none" stroke-width="9"/>
+          <circle class="value" id="ring-value" cx="50" cy="50" r="42" fill="none" stroke-width="9" stroke-linecap="round" stroke-dasharray="264" stroke-dashoffset="264" transform="rotate(-90 50 50)"/>
+          <text id="ring-text" x="50" y="59" text-anchor="middle">-</text></svg>
+        <div><h2>Health score</h2><p id="over-score" style="margin:0">Running the tests...</p>
+          <button class="ghost small" style="margin-top:8px" onclick="show('monitor')">See every test</button></div>
+      </div>
+      <div class="tiles" id="tiles"></div>
+    </div>
+    <div class="card">
+      <div class="head" style="align-items:center"><div><h2>Topology</h2><p>Drawn from the cables inside the lab file. Click a router or switch to read its config.</p></div></div>
+      <div id="topology"><p class="empty" style="padding:18px">Drawing...</p></div>
+    </div>
+  </section>
+
+  <section id="lab" hidden>
     <div class="head">
       <div><h1>Lab</h1><p class="sub" id="lab-sub">The routers and switches inside the Packet Tracer file. Click one to read its config.</p></div>
       <div class="tools">
         <input id="lab-filter" placeholder="Filter devices or VLANs" style="width:210px" oninput="drawLab()">
         <button class="ghost small" onclick="loadLab(true)">Refresh</button>
+        <button class="ghost small" onclick="addRoom()">Add a room</button>
         <button class="ghost small" onclick="arrange()">Tidy the canvas</button>
         <button class="small" onclick="openLab()">Open in Packet Tracer</button>
       </div>
@@ -286,6 +350,24 @@ PAGE = r"""<!doctype html>
       </div>
     </div>
     <div id="result"></div>
+  </section>
+
+  <section id="monitor" hidden>
+    <div class="head">
+      <div><h1>Monitor</h1><p class="sub" id="mon-sub">Tests that measure a number in the lab file and compare it with a target.</p></div>
+      <div class="tools">
+        <button class="ghost small" onclick="loadHealth(false, true)">Run the tests</button>
+        <button class="small go" style="margin:0" onclick="loadHealth(true, true)">Run and record</button>
+      </div>
+    </div>
+    <div class="two" style="grid-template-columns:1fr minmax(260px, 340px)">
+      <div id="tests"><p class="empty">Running the tests...</p></div>
+      <div>
+        <div class="card"><h2>Score over time</h2><p>One point for every recorded run. Record a run after each change to see when something broke.</p>
+          <div id="trend"></div></div>
+        <div class="card stack"><h2>What is not tested here</h2><p style="margin:0">These tests read the lab file. Pings, DHCP leases and failover times only exist while Packet Tracer runs, so those are the tests in the README table.</p></div>
+      </div>
+    </div>
   </section>
 
   <section id="checks" hidden>
@@ -365,10 +447,10 @@ PAGE = r"""<!doctype html>
 
 <script>
   const NL = String.fromCharCode(10);
-  const TABS = [['lab', 'Lab'], ['configure', 'Configure'], ['checks', 'Checks'], ['history', 'History']];
+  const TABS = [['overview', 'Overview'], ['lab', 'Lab'], ['configure', 'Configure'], ['monitor', 'Monitor'], ['checks', 'Checks'], ['history', 'History']];
   const LAYERS = [['edge', 'Edge routers'], ['core', 'Core switches'], ['dist', 'Distribution switches'], ['room', 'Room switches'],
                   ['access', 'Office and MDF'], ['outside', 'Outside the school']];
-  let DATA = null, LAB = null, SHEET = '', SHEET_NAME = '';
+  let DATA = null, LAB = null, HEALTH = null, SHEET = '', SHEET_NAME = '';
 
   function val(id) { return document.getElementById(id).value; }
   function el(tag, text, cls) { const e = document.createElement(tag); if (text) e.textContent = text; if (cls) e.className = cls; return e; }
@@ -411,6 +493,7 @@ PAGE = r"""<!doctype html>
     }
     location.hash = name;
     if (name === 'history') loadHistory();
+    if (name === 'monitor' && !HEALTH) loadHealth(false);
   }
 
   // ---- Lab tab
@@ -513,6 +596,106 @@ PAGE = r"""<!doctype html>
     toast(reply.error || reply.message);
   }
 
+  async function addRoom() {
+    const room = prompt('Room number of the new classroom (a letter and three digits, like E231).' + NL + NL +
+                        'It gets a 2960 switch, 15 student PCs, a teacher PC and two uplinks, copied from the last room. ' +
+                        'Close the lab in Packet Tracer first.');
+    if (!room) return;
+    toast('Adding room ' + room.toUpperCase() + '...');
+    const reply = await ask('/add-room', {room: room});
+    toast(reply.error || reply.message);
+    if (!reply.error) { DATA = await (await fetch('/data')).json(); loadLab(); loadOverview(); }
+  }
+
+  // ---- Overview and Monitor tabs
+  function svgEl(tag, attrs) {
+    const e = document.createElementNS('http://www.w3.org/2000/svg', tag);
+    for (const k in attrs) e.setAttribute(k, attrs[k]);
+    return e;
+  }
+
+  async function loadOverview(say) {
+    loadHealth(false);
+    const reply = await ask('/topology');
+    const box = clear('topology');
+    if (reply.error) { box.appendChild(el('div', reply.error, 'msg bad')); return; }
+    const picture = new DOMParser().parseFromString(reply.svg, 'image/svg+xml').documentElement;
+    box.appendChild(document.importNode(picture, true));
+    for (const node of box.querySelectorAll('.node')) {
+      node.addEventListener('click', () => {
+        const d = LAB && LAB.devices.find(d => d.name === node.dataset.name);
+        if (d) openSheet(d); else toast(node.dataset.name + ' is a server, it has no IOS config.');
+      });
+    }
+    if (say) toast('Overview read again.');
+  }
+
+  async function loadHealth(record, say) {
+    const reply = await ask('/health', {record: record});
+    if (reply.error) {
+      clear('tests').appendChild(el('div', reply.error, 'msg bad'));
+      document.getElementById('over-score').textContent = reply.error;
+      return;
+    }
+    HEALTH = reply;
+    // the ring and the tiles on the Overview
+    document.getElementById('ring-text').textContent = reply.score;
+    document.getElementById('ring-value').setAttribute('stroke-dashoffset', 264 - 264 * reply.score / 100);
+    document.getElementById('ring').setAttribute('class', 'ring' + (reply.score < 100 ? ' low' : ''));
+    const failed = reply.tests.filter(t => !t.passed);
+    document.getElementById('over-score').textContent = reply.passed + ' of ' + reply.total + ' tests pass' +
+      (failed.length ? '. Failing: ' + failed.map(t => t.title).join('; ') : ', nothing to fix.');
+    const tiles = clear('tiles');
+    const rooms = DATA ? DATA.devices.filter(d => d.group === 'room').length : 0;
+    for (const [number, label] of [[reply.counts.devices, 'devices in the lab'], [reply.counts['network devices'], 'routers and switches'],
+        [reply.counts.hosts, 'PCs and servers'], [rooms, 'classrooms'], [reply.counts.cables, 'cables'],
+        [reply.counts['failures tried'], 'single failures survived']]) {
+      const tile = el('div', '', 'tile'); tile.appendChild(el('b', String(number))); tile.appendChild(el('span', label)); tiles.appendChild(tile);
+    }
+    document.getElementById('over-sub').textContent = 'The lab at a glance. Tests last run ' + reply.time + '.';
+
+    // the list on the Monitor tab
+    const box = clear('tests');
+    let group = null, card = null;
+    for (const t of reply.tests) {
+      if (t.group !== group) { group = t.group; card = el('div', '', 'card' + (box.children.length ? ' stack' : '')); card.appendChild(el('h2', group)); box.appendChild(card); }
+      const row = el('div', '', 'test');
+      row.appendChild(el('span', t.passed ? String.fromCharCode(10003) : '!', 'mark' + (t.passed ? '' : ' bad')));
+      row.appendChild(el('span', t.title));
+      const meter = el('div', '', 'meter' + (t.passed ? '' : ' bad'));
+      const fill = el('i'); fill.style.width = Math.min(100, t.lower_is_better ? t.measured : 100 * t.measured / (t.target || 1)) + '%';
+      meter.appendChild(fill); row.appendChild(meter);
+      const number = el('span', '', 'number');
+      number.appendChild(el('b', String(t.measured)));
+      number.appendChild(el('small', (t.lower_is_better ? ' ' + t.unit + ', limit ' + t.target : ' of ' + t.target + ' ' + t.unit)));
+      row.appendChild(number);
+      if (t.detail.length) row.appendChild(el('pre', t.detail.join(NL), 'why'));
+      card.appendChild(row);
+    }
+    document.getElementById('mon-sub').textContent = reply.passed + ' of ' + reply.total + ' tests pass, score ' + reply.score +
+      '%. Each test measures a number in the lab file and compares it with a target.';
+    drawTrend(reply.history);
+    if (say) toast(record ? 'Tests run and recorded.' : 'Tests run.');
+  }
+
+  function drawTrend(rows) {
+    const box = clear('trend');
+    if (!rows.length) { box.appendChild(el('p', 'Nothing recorded yet. Press Run and record.', 'empty')); return; }
+    const svg = svgEl('svg', {class: 'spark', viewBox: '0 0 300 70', preserveAspectRatio: 'none'});
+    const points = rows.map((r, i) => [rows.length === 1 ? 150 : 6 + 288 * i / (rows.length - 1), 64 - 58 * Number(r.score) / 100]);
+    svg.appendChild(svgEl('polyline', {points: points.map(p => p.join(',')).join(' ')}));
+    for (const [x, y] of points) svg.appendChild(svgEl('circle', {cx: x, cy: y, r: 2.5}));
+    box.appendChild(svg);
+    const table = el('table');
+    for (const r of rows.slice(-6).reverse()) {
+      const tr = el('tr');
+      tr.appendChild(el('td', r.time, 'soft')); tr.appendChild(el('td', r.score + '%'));
+      tr.appendChild(el('td', r.passed + '/' + r.total + ' tests, ' + r.devices + ' devices', 'soft'));
+      table.appendChild(tr);
+    }
+    box.appendChild(table);
+  }
+
   // ---- Configure tab
   async function start() {
     const tabs = document.getElementById('tabs');
@@ -547,8 +730,9 @@ PAGE = r"""<!doctype html>
     drawFields();
     countDevices();
     const wanted = location.hash.slice(1);
-    show(TABS.some(t => t[0] === wanted) ? wanted : 'lab');
+    show(TABS.some(t => t[0] === wanted) ? wanted : 'overview');
     loadLab();
+    loadOverview();
   }
 
   function pickGroup(g) {
@@ -612,7 +796,7 @@ PAGE = r"""<!doctype html>
       result.appendChild(part);
     }
     result.scrollIntoView({behavior: 'smooth', block: 'nearest'});
-    if (reply.written) { toast('Written to the lab.'); loadLab(); }
+    if (reply.written) { toast('Written to the lab.'); loadLab(); loadOverview(); }
   }
 
   // ---- Checks tab
@@ -663,7 +847,7 @@ PAGE = r"""<!doctype html>
         b.onclick = async () => {
           if (!confirm('Put the lab back to how it was before this change?' + NL + NL + 'Close the lab in Packet Tracer first.')) return;
           const r = await ask('/restore', {backup: name});
-          toast(r.error || r.message); loadHistory(); loadLab();
+          toast(r.error || r.message); loadHistory(); loadLab(); loadOverview();
         };
         cell.appendChild(b); tr.appendChild(cell);
         table.appendChild(tr);

@@ -2,6 +2,25 @@
 
 Packet Tracer 9.0 project. The file is `RHS School Network.pkt`.
 
+## In one minute
+
+**The problem.** A school has students, teachers, office staff and IT on one network. Students
+must not reach staff PCs or the file server, everybody needs the internet, and one broken
+switch or cable must not stop classes.
+
+**The design.** Three layers (access, distribution, core) plus two edge routers, with two of
+everything above the room switches. Each group of people has its own VLAN and subnet, the rules
+between them are ACLs on the distribution switches, and HSRP, Rapid PVST+, EtherChannel and
+OSPF move traffic to the other device when one fails.
+
+**Why this way.** VLANs by role (not by room) mean one set of rules for all students wherever
+they sit. Putting the gateways and ACLs on the distribution layer keeps the core simple. Two
+uplinks per room switch cost one extra cable per room and remove every single point of failure
+between a room and the internet: `tools/labtest.py` breaks all 42 backbone devices and cables
+one at a time and counts that all 140 PCs and servers still have a path out.
+
+![Topology of the lab](topology.svg)
+
 Other files in this folder:
 
 - `WALKTHROUGH.md` - how to open the lab, log in, and how each part was built step by step
@@ -12,18 +31,21 @@ Other files in this folder:
   - `pktconfig.py` writes those changes straight into `RHS School Network.pkt`, so nothing has to be pasted into each device
   - `pktfile.py` unpacks and packs the `.pkt` file format (used by the other two)
   - `pktlayout.py` arranges the devices on the canvas, draws the coloured boxes and writes the text notes in the lab
+  - `pktbuild.py` adds a whole classroom (switch, 16 PCs, cables, uplinks, configs) to the lab with one command
+  - `labtest.py` runs measurable tests on the lab file (redundancy, VLANs, security, monitoring) and keeps a history of the score
+  - `diagram.py` draws `topology.svg` from the cables and configs inside the lab file
   - `netcheck_ui.py` is a simple page in the browser with buttons for all of it. Start it with `python3 tools/netcheck_ui.py`
 - `screenshots/` - screenshots for this document (list is at the bottom)
 
 ## 1. Lab overview
 
-This is my own design for part of a high school network, using six rooms at Redmond High
-School: E230, E110, E103, E203, C214 and B126. It is NOT the real RHS network. I don't know
+This is my own design for part of a high school network, using eight rooms at Redmond High
+School: E230, E110, E103, E203, C214, B126, B128 and C216. It is NOT the real RHS network. I don't know
 how the district set theirs up, so the topology, subnets, VLANs and rules are my own choices.
 
 What the network has to do:
 
-- 90 student PCs (15 per room), 6 teacher PCs, 6 office PCs, 2 IT PCs, 4 servers
+- 120 student PCs (15 per room), 8 teacher PCs, 6 office PCs, 2 IT PCs, 4 servers
 - students, teachers, office staff and IT are kept apart, with rules for who can reach what
 - every PC gets its address from one DHCP server
 - everyone reaches the internet through NAT
@@ -41,7 +63,8 @@ Logins (same on every router and switch, console included):
 
 ## 2. Topology
 
-Three layers, like the Cisco campus model:
+Three layers, like the Cisco campus model. The picture at the top of this page (`topology.svg`)
+is drawn by `tools/diagram.py` from the lab file itself. The same thing as text:
 
 ```
                          INET-SRV
@@ -53,9 +76,9 @@ Three layers, like the Cisco campus model:
                 [CORE-L3-1]=====[CORE-L3-2]      CORE: routing only (OSPF)
                     |     \   /     |
                 [DIST-L3-1]=====[DIST-L3-2]      DISTRIBUTION: gateways, HSRP, ACLs, DHCP relay
-                  |  |  |  |  |  |  |  |
-   SW-OFFICE   SW-E230 SW-E110 SW-E103 SW-E203 SW-C214 SW-B126   SW-MDF      ACCESS
-    6 PCs        16 PCs in each room (15 students + teacher)      4 servers, 2 IT PCs
+                  |  |  |  |  |  |  |  |  |  |
+   SW-OFFICE   SW-E230 SW-E110 SW-E103 SW-E203 SW-C214 SW-B126 SW-B128 SW-C216   SW-MDF      ACCESS
+    6 PCs              16 PCs in each room (15 students + teacher)             4 servers, 2 IT PCs
 ```
 
 `=====` is an EtherChannel. Every access switch has one trunk to DIST-L3-1 and one to DIST-L3-2.
@@ -65,7 +88,7 @@ Three layers, like the Cisco campus model:
 | RHS-EDGE1, RHS-EDGE2 | 2911 | edge | NAT, default route to the ISP, ACL for traffic from the internet |
 | CORE-L3-1, CORE-L3-2 | 3650 | core | route between edge and distribution, nothing else |
 | DIST-L3-1, DIST-L3-2 | 3650 | distribution | default gateway of every VLAN (HSRP), ACLs between VLANs, DHCP relay, STP root |
-| SW-E230, SW-E110, SW-E103, SW-E203, SW-C214, SW-B126 | 2960 | access | one per room. Fa0/1-15 students, Fa0/16 teacher, Gi0/1 and Gi0/2 uplinks |
+| SW-E230, SW-E110, SW-E103, SW-E203, SW-C214, SW-B126, SW-B128, SW-C216 | 2960 | access | one per room. Fa0/1-15 students, Fa0/16 teacher, Gi0/1 and Gi0/2 uplinks |
 | SW-OFFICE | 3650 as layer 2 | access | main office and counseling |
 | SW-MDF | 3650 as layer 2 | access | servers and the IT office |
 | ISP, INET-SRV | 2911, server | outside | pretend internet |
@@ -87,7 +110,7 @@ the same two boxes. Splitting it up:
 
 | VLAN | Name | Subnet | Gateway | Who | Root / HSRP active |
 |------|------|--------|---------|-----|--------------------|
-| 10 | STUDENTS | 10.10.8.0/22 | 10.10.8.1 | the 90 room PCs | DIST-L3-1 |
+| 10 | STUDENTS | 10.10.8.0/22 | 10.10.8.1 | the 120 room PCs | DIST-L3-1 |
 | 20 | TEACHERS | 10.10.20.0/24 | 10.10.20.1 | teacher PC in each room | DIST-L3-2 |
 | 30 | MANAGEMENT | 10.10.30.0/24 | 10.10.30.1 | principal, counselors, office | DIST-L3-2 |
 | 70 | SERVERS | 10.10.70.0/24 | 10.10.70.1 | servers | DIST-L3-1 |
@@ -319,14 +342,96 @@ I have not filled in the Result column yet. It gets filled in from real output o
 
 Failure tests (start `ping -t 8.8.8.8` on E230-PC01 first, undo each one after):
 
-| # | Break this | Expected | Result |
-|---|------------|----------|--------|
-| F1 | `shutdown` G0/0/0 on RHS-EDGE1 | a few pings lost, default route moves to RHS-EDGE2 | |
-| F2 | `shutdown` Gi1/0/1 and Gi1/0/4 on DIST-L3-1 (both uplinks) | traffic goes through DIST-L3-2 over VLAN 101 | |
-| F3 | `shutdown` interface Vlan10 on DIST-L3-1 | DIST-L3-2 becomes HSRP active for VLAN 10 | |
-| F4 | `shutdown` Gi0/1 on SW-E230 | Gi0/2 goes to forwarding for VLAN 10 | |
-| F5 | `shutdown` Gi1/0/2 on DIST-L3-1 | Po1 stays up on Gi1/0/3 | |
-| F6 | `shutdown` Gi1/0/5 and Gi1/0/6 on CORE-L3-1 | everything goes through CORE-L3-2 | |
+Write down how many pings were lost in each one. That number is the measurement. A few lost
+pings while the other device takes over are expected, a ping that never comes back is a fail.
+
+| # | Break this | Expected | Pings lost | Result |
+|---|------------|----------|------------|--------|
+| F1 | `shutdown` G0/0/0 on RHS-EDGE1 | a few pings lost, default route moves to RHS-EDGE2 | | |
+| F2 | `shutdown` Gi1/0/1 and Gi1/0/4 on DIST-L3-1 (both uplinks) | traffic goes through DIST-L3-2 over VLAN 101 | | |
+| F3 | `shutdown` interface Vlan10 on DIST-L3-1 | DIST-L3-2 becomes HSRP active for VLAN 10 | | |
+| F4 | `shutdown` Gi0/1 on SW-E230 | Gi0/2 goes to forwarding for VLAN 10 | | |
+| F5 | `shutdown` Gi1/0/2 on DIST-L3-1 | Po1 stays up on Gi1/0/3 | | |
+| F6 | `shutdown` Gi1/0/5 and Gi1/0/6 on CORE-L3-1 | everything goes through CORE-L3-2 | | |
+
+### Measured tests without Packet Tracer
+
+`tools/labtest.py` reads the cables and configs inside the `.pkt` file and measures 14 things.
+Every test is a number against a target, so it either passes or it does not. This is the real
+output for the lab as it is in this folder:
+
+```
+Redundancy
+  PASS  Hosts that still reach the ISP after any single failure              140 of 140 hosts
+  PASS  Access switches cabled to both distribution switches                 10 of 10 switches
+  PASS  VLANs with the same HSRP gateway on both distribution switches       5 of 5 VLANs
+  PASS  VLANs where the spanning tree root is also the HSRP active switch    5 of 5 VLANs
+
+Switching
+  PASS  Trunk cables with the same allowed and native VLANs on both ends     26 of 26 trunks
+  PASS  PCs and servers plugged into a port of the right VLAN                140 of 140 hosts
+  PASS  Gateway interfaces that relay DHCP to SRV-DHCP                       6 of 6 interfaces
+  PASS  Fullest subnet (lower is better)                                     12 <= 50 % used
+
+Security
+  PASS  PC ports with port security                                          136 of 136 ports
+  PASS  Host ports with PortFast and BPDU guard                              140 of 140 ports
+  PASS  Ports without a cable that are shut down                             176 of 176 ports
+  PASS  Devices that only allow SSH version 2 for remote login               16 of 16 devices
+
+Monitoring
+  PASS  Devices that send logs to SRV-LOG, use NTP and answer SNMP           16 of 16 devices
+  PASS  Device configs in the lab that match the configs folder              17 of 17 devices
+
+14 of 14 tests passed, score 100%.
+Lab: 162 devices (16 routers and switches, 140 PCs and servers), 177 cables. 42 single failures tried.
+```
+
+`python3 labtest.py --record` adds the result to `changes/health.csv`, so there is a history of
+the score after every change (the Monitor tab of the page shows it as a graph). It cannot see
+live things like a ping or a DHCP lease. Those are the tables above.
+
+### Troubleshooting examples
+
+Two faults put into a copy of the lab on purpose, how each one was found and how it is fixed.
+The `labtest.py` output is real. The Packet Tracer side (symptom and screenshots) I still have
+to do myself in the lab.
+
+**Fault 1: a student port in the teacher VLAN.** On SW-E230:
+
+    interface FastEthernet0/3
+     switchport access vlan 20
+
+- Symptom to look for in Packet Tracer: E230-PC03 gets a 10.10.20.x address after
+  `ipconfig /renew` and can suddenly reach the file server, which students must not
+- Found by: `labtest.py` drops from 14 to 12 passing tests and names the port
+
+      FAIL PCs and servers plugged into a port of the right VLAN   139 of 140 hosts
+           E230-PC03: on SW-E230 FastEthernet0/3 in VLAN 20, should be VLAN 10
+      FAIL Device configs in the lab that match the configs folder  16 of 17 devices
+           SW-E230: lab and configs/SW-E230.txt differ
+
+  In the CLI the same thing shows in `show vlan brief` on SW-E230 (Fa0/3 listed under VLAN 20)
+- Fix: `interface fa0/3` then `switchport access vlan 10`, renew the address on the PC
+
+**Fault 2: a VLAN missing on one end of a trunk.** On DIST-L3-1:
+
+    interface GigabitEthernet1/0/6
+     switchport trunk allowed vlan remove 20
+
+- Symptom to look for: probably none at first. The teacher PC in E110 should keep working
+  through the other uplink to DIST-L3-2, so the fault hides until that uplink fails too.
+  This is the kind of problem redundancy covers up
+- Found by: `labtest.py` compares both ends of every trunk cable
+
+      FAIL Trunk cables with the same allowed and native VLANs on both ends   25 of 26 trunks
+           SW-E110 GigabitEthernet0/1 - DIST-L3-1 GigabitEthernet1/0/6: allowed 10,20,99 / 10,99, native 999 / 999
+
+  In the CLI: `show interfaces trunk` on DIST-L3-1 and on SW-E110, compare the "VLANs allowed" lines
+- Fix: `interface gi1/0/6` then `switchport trunk allowed vlan add 20`
+
+Both faults can be put in from the Configure tab ("custom commands") and taken out again with
+Restore on the History tab.
 
 ### Troubleshooting order
 
@@ -366,3 +471,7 @@ Not taken yet. They go in `screenshots/` with these names.
 | 08-nat.png | `show ip nat translations` on RHS-EDGE1 |
 | 09-failover.png | the ping during failure test F1 |
 | 10-netcheck.png | `netcheck.py` output in Terminal |
+| 11-routing-table.png | `show ip route` on DIST-L3-1 and RHS-EDGE1 |
+| 12-fault1-wrong-vlan.png | troubleshooting fault 1: `show vlan brief` on SW-E230 before and after the fix |
+| 13-fault2-trunk.png | troubleshooting fault 2: `show interfaces trunk` on DIST-L3-1 and SW-E110 |
+| 14-monitor.png | the Monitor tab of the NetCheck page |

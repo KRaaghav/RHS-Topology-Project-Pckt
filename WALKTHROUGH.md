@@ -331,7 +331,11 @@ The programs are in `tools/`. They need Python 3, which is already on a Mac. Not
 ### With buttons
 
 Double click `Start NetCheck.command` in the `tools` folder (or run `python3 netcheck_ui.py`).
-A page opens in the browser with four tabs:
+A page opens in the browser with six tabs:
+
+- **Overview** - the health score, how many devices and cables the lab has, and the topology
+  drawn from the lab file. Click a router or switch in the picture to read its config.
+  "Add a room" runs `pktbuild.py`: type a room number and the lab gets a new classroom
 
 - **Lab** - every router and switch that is inside the Packet Tracer file, by layer, with its
   VLANs. Click one to read its running config (there is a search box). The green dot means the
@@ -341,6 +345,8 @@ A page opens in the browser with four tabs:
   commands for each device and, next to them, the lines that would change in the lab.
   **Write to the lab** puts the change into the lab file itself. "Save scripts only" just writes
   the scripts to a `changes` folder
+- **Monitor** - the measurable tests of `labtest.py` with a bar for each one. "Run and record"
+  adds the result to the history, so the graph shows when a change broke something
 - **Checks** - subnet calculator, check the plan, check the inventory, compare two configs,
   make a config for a new room switch
 - **History** - every change that was made, and the copies of the lab from before each one.
@@ -447,5 +453,14 @@ something like 10.10.70.300, and run the inventory check again.
   once (`ip address`, `switchport mode`) replaces the old line, `no ...` removes a line, anything
   else is put next to the lines that look like it. VLANs go into the VLAN database of the switch,
   because that is where IOS keeps them (not in the running config)
+- `pktbuild.py` adds a room by copying the devices and cables of the last room inside the XML.
+  Every copy gets a new name, new MAC addresses and new internal numbers, the switch gets the
+  next free management address and the next free port on both distribution switches
+- `labtest.py` builds a list of all cables and all configs. Each test is a small function that
+  returns a measured number, a target and the list of things that are wrong. The single failure
+  test removes one device or cable at a time and walks the cables from the ISP to see which
+  hosts can still be reached
+- `diagram.py` writes the topology picture as SVG text, with positions worked out from the
+  number of access switches
 - `netcheck_ui.py` is a very small web server that only this computer can reach. A button on
   the page sends a request, the server calls the matching function and sends the text back

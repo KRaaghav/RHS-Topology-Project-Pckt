@@ -275,7 +275,7 @@ def add_room(room, lab_path=LAB, write=True):
         return report + ["Dry run, nothing was written."]
 
     real_lab = os.path.abspath(lab_path) == os.path.abspath(LAB)
-    backup = pktconfig.backup_lab(lab_path)
+    backup = pktconfig.backup_lab(lab_path) if real_lab else None     # a copy of a copy is not needed
     lab.save()
     if real_lab:
         write_config_file(old_room, room, old_port, new_port, old_address, address)
@@ -287,7 +287,8 @@ def add_room(room, lab_path=LAB, write=True):
                 f.write("\n".join(lines) + "\n")
         add_to_inventory(room, address)
         pktlayout.arrange(lab_path, backup=False)
-    report.append(f"Written to {os.path.basename(lab_path)}. The lab from before is in changes/backups/{backup}")
+    report.append(f"Written to {os.path.basename(lab_path)}." +
+                  (f" The lab from before is in changes/backups/{backup}" if backup else ""))
     if pktconfig.packet_tracer_is_open():
         report.append("Note: Packet Tracer is running. If this lab is open in it, close the lab WITHOUT "
                       "saving and open it again.")

@@ -17,6 +17,9 @@ import pytest
 ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")
 sys.path.insert(0, os.path.join(ROOT, "tools"))
 
+import diagram                                      # noqa: E402
+import labtest                                      # noqa: E402
+import pktbuild                                     # noqa: E402
 import pktconfig                                    # noqa: E402
 import pktfile                                      # noqa: E402
 
@@ -150,3 +153,78 @@ def test_change_is_written_into_a_copy_of_the_lab(tmp_path):
     others = [n for n in again.names() if n != name]
     original = pktconfig.Lab(LAB)
     assert all(again.config(n) == original.config(n) for n in others)
+
+
+# ---------------------------------------------------------------- measurable tests of the lab
+
+def test_lab_passes_every_measurable_test():
+    result = labtest.run(LAB)
+    failed = [t["title"] + ": " + "; ".join(t["detail"]) for t in result["tests"] if not t["passed"]]
+    assert failed == []
+    assert result["score"] == 100
+
+
+def test_single_failure_test_really_breaks_things():
+    picture = labtest.Picture(LAB)
+    assert set(picture.hosts) <= picture.reach_isp()
+    # a room switch is the one thing that has no backup: its own PCs are cut off
+    alive = picture.reach_isp(dead_device="SW-E230")
+    assert "E230-PC01" not in alive and "E110-PC01" in alive
+
+
+def broken_copy(tmp_path, device, commands):
+    copy = str(tmp_path / "broken.pkt")
+    shutil.copy(LAB, copy)
+    lab = pktconfig.Lab(copy)
+    lab.set_config(device, pktconfig.merge(lab.config(device), commands)[0])
+    lab.save()
+    return {t["id"]: t for t in labtest.run(copy)["tests"]}
+
+
+def test_wrong_vlan_on_a_port_is_found(tmp_path):
+    tests = broken_copy(tmp_path, "SW-E230", "interface fa0/3\n switchport access vlan 20\n")
+    assert not tests["host-vlans"]["passed"]
+    assert "E230-PC03" in tests["host-vlans"]["detail"][0]
+    assert tests["trunks"]["passed"]
+
+
+def test_vlan_missing_on_a_trunk_is_found(tmp_path):
+    tests = broken_copy(tmp_path, "DIST-L3-1", "interface gi1/0/6\n switchport trunk allowed vlan remove 20\n")
+    assert not tests["trunks"]["passed"]
+    assert tests["trunks"]["measured"] == tests["trunks"]["target"] - 1
+
+
+# ---------------------------------------------------------------- adding a room, the picture
+
+def test_room_is_added_to_a_copy_of_the_lab(tmp_path):
+    copy = str(tmp_path / "bigger.pkt")
+    shutil.copy(LAB, copy)
+    before = labtest.Picture(copy)
+    pktbuild.add_room("Z999", copy)
+    after = labtest.Picture(copy)
+
+    assert len(after.devices) == len(before.devices) + 17          # a switch and 16 PCs
+    assert len(after.links) == len(before.links) + 18              # 16 PCs and two uplinks
+    assert len(set(after.devices)) == len(after.devices)
+    assert {other for other, port in after.cabled("SW-Z999").values() if other.startswith("DIST")} == \
+        {"DIST-L3-1", "DIST-L3-2"}
+    assert "hostname SW-Z999" in after.configs["SW-Z999"]
+    assert set(after.hosts) <= after.reach_isp()
+    # the tests that only look at cables and configs still pass with the new room
+    tests = {t["id"]: t for t in labtest.run(copy)["tests"]}
+    assert all(tests[name]["passed"] for name in ("single-failure", "two-uplinks", "trunks", "port-security"))
+
+
+def test_bad_room_numbers_are_refused(tmp_path):
+    with pytest.raises(pktconfig.Problem):
+        pktbuild.add_room("room 12", LAB, write=False)
+    with pytest.raises(pktconfig.Problem):
+        pktbuild.add_room("E230", LAB, write=False)                # already there
+
+
+def test_picture_shows_every_router_and_switch():
+    picture = diagram.svg(LAB)
+    for name in labtest.Picture(LAB).configs:
+        assert f'data-name="{name}"' in picture
+    with open(os.path.join(ROOT, "topology.svg")) as f:
+        assert f.read() == picture                                 # the saved picture is up to date

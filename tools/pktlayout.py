@@ -22,6 +22,7 @@ before is kept in ../changes/backups.
 Only uses the Python standard library, nothing to install.
 """
 
+import csv
 import html
 import os
 import re
@@ -29,7 +30,7 @@ import sys
 import uuid
 
 import pktfile
-from pktconfig import LAB, Problem, backup_lab, packet_tracer_is_open
+from pktconfig import HERE, LAB, Problem, backup_lab, packet_tracer_is_open
 
 # ---------------------------------------------------------------- where everything goes
 # All numbers are pixels on the canvas. A device position is the middle of its icon.
@@ -40,42 +41,65 @@ ROOMS_TOP, ROOMS_BOTTOM = 930, 1810
 FIRST_ROOM_LEFT = 60
 SWITCH_Y = 1060
 PC_ROWS = [1220, 1370, 1520, 1670]
-MIDDLE = 2670                   # the routers and layer 3 switches are centred on this line
-LAYER_LEFT, LAYER_RIGHT = 2280, 3060
 
 # colours of the boxes (red, green, blue)
 GREY, RED, PURPLE, BLUE = (232, 232, 232), (255, 216, 216), (228, 218, 255), (208, 226, 255)
 GREEN, YELLOW, CYAN = (208, 248, 208), (255, 255, 176), (184, 248, 248)
 
-# (name on the room note, access switch, colour, PCs from left to right and top to bottom)
-ROOMS = [("Main office + counseling\nVLAN 30 MANAGEMENT", "SW-OFFICE", GREEN,
-          ["PRINCIPAL-PC", "ASST-PRINCIPAL-PC", "COUNSELOR1-PC", "COUNSELOR2-PC", "REGISTRAR-PC", "FRONT-OFFICE-PC"])]
-for room in ("E230", "E110", "E103", "E203", "C214", "B126"):
-    ROOMS.append((f"Room {room}\nVLAN 10 students (15), VLAN 20 teacher", "SW-" + room, YELLOW,
-                  [f"{room}-PC{n:02d}" for n in range(1, 16)] + [room + "-TCHR"]))
-ROOMS.append(("MDF (server room) + IT office\nVLAN 70 SERVERS, VLAN 99 NETWORK-IT", "SW-MDF", CYAN,
-              ["SRV-DHCP", "SRV-DNS-WEB", "SRV-LOG", "SRV-FILE", "IT-PC1", "IT-PC2"]))
+OFFICE_PCS = ["PRINCIPAL-PC", "ASST-PRINCIPAL-PC", "COUNSELOR1-PC", "COUNSELOR2-PC", "REGISTRAR-PC",
+              "FRONT-OFFICE-PC"]
+MDF_DEVICES = ["SRV-DHCP", "SRV-DNS-WEB", "SRV-LOG", "SRV-FILE", "IT-PC1", "IT-PC2"]
 
-# the layers in the middle: (y, colour, {device: x})
-LAYERS = [(80, GREY, {"ISP": MIDDLE, "INET-SRV": MIDDLE + 290}),
-          (310, RED, {"RHS-EDGE1": MIDDLE - 240, "RHS-EDGE2": MIDDLE + 240}),
-          (540, PURPLE, {"CORE-L3-1": MIDDLE - 240, "CORE-L3-2": MIDDLE + 240}),
-          (770, BLUE, {"DIST-L3-1": MIDDLE - 240, "DIST-L3-2": MIDDLE + 240})]
+
+def classrooms():
+    """The room numbers, from the 2960 switches in inventory.csv (SW-E230 -> E230).
+    pktbuild.py adds a line there when it adds a room, so the layout follows by itself."""
+    with open(os.path.join(HERE, "inventory.csv"), newline="") as f:
+        return [row["name"][3:] for row in csv.DictReader(f)
+                if row["type"] == "switch 2960" and row["name"].startswith("SW-")]
+
+
+def rooms():
+    """(name on the room note, access switch, colour, PCs from left to right and top to bottom)"""
+    found = [("Main office + counseling\nVLAN 30 MANAGEMENT", "SW-OFFICE", GREEN, OFFICE_PCS)]
+    for room in classrooms():
+        found.append((f"Room {room}\nVLAN 10 students (15), VLAN 20 teacher", "SW-" + room, YELLOW,
+                      [f"{room}-PC{n:02d}" for n in range(1, 16)] + [room + "-TCHR"]))
+    found.append(("MDF (server room) + IT office\nVLAN 70 SERVERS, VLAN 99 NETWORK-IT", "SW-MDF", CYAN, MDF_DEVICES))
+    return found
+
+
+def middle():
+    """The routers and layer 3 switches are centred above the row of rooms."""
+    return FIRST_ROOM_LEFT + ((len(rooms()) - 1) * ROOM_STEP + ROOM_WIDTH) // 2
+
+
+def layers():
+    """The layers in the middle: (y, colour, {device: x})"""
+    m = middle()
+    return [(80, GREY, {"ISP": m, "INET-SRV": m + 290}),
+            (310, RED, {"RHS-EDGE1": m - 240, "RHS-EDGE2": m + 240}),
+            (540, PURPLE, {"CORE-L3-1": m - 240, "CORE-L3-2": m + 240}),
+            (770, BLUE, {"DIST-L3-1": m - 240, "DIST-L3-2": m + 240})]
 
 
 # ---------------------------------------------------------------- the text on the canvas
 # (x, y, text). Lines are kept under about 72 characters so the columns do not run into
-# each other. Four columns at the top (x = 60, 1100, 3300, 4300), three notes at the bottom.
+# each other. Four columns at the top: two on the left (x = 60 and 1100) and two on the right
+# of the layer boxes (RIGHT means: this far right of the middle). Four notes at the bottom.
+# {students}, {teachers} and {rooms} are filled in from the inventory.
 # The notes at the top end above y = 700, so the uplinks to the rooms do not run through them.
+
+RIGHT = "right"
 
 NOTES = [
     (60, 15, """RHS CAMPUS NETWORK - CCNA project (Packet Tracer 9.0)
-My own design for part of a high school network, using six rooms
+My own design for part of a high school network, using {rooms} rooms
 at Redmond High School. It is NOT the real RHS network.
 
 WHAT THIS LAB DOES
-- connects 90 student PCs, 6 teacher PCs, 6 office PCs, 2 IT PCs and
-  4 servers in six classrooms, the main office and the server room
+- connects {students} student PCs, {teachers} teacher PCs, 6 office PCs, 2 IT PCs and
+  4 servers in {rooms} classrooms, the main office and the server room
 - keeps students, teachers, office staff and IT apart in their own
   VLANs, with ACLs that decide who can reach what
 - gives every PC its address from one DHCP server (SRV-DHCP)
@@ -118,21 +142,21 @@ DIST-L3-2 is HSRP active + STP root for VLAN 20, 30.
 interface vlan + standby (gateway .1), ip helper-address
 ip access-list extended + ip access-group in, router ospf 1"""),
 
-    (3300, 15, """ACCESS LAYER - one 2960 per room, office and MDF are 3650 as layer 2
+    ((RIGHT, 630), 15, """ACCESS LAYER - one 2960 per room, office and MDF are 3650 as layer 2
 Where the PCs plug in. Fa0/1-15 students, Fa0/16 teacher.
 One trunk to each distribution switch (Gi0/1 and Gi0/2).
 Spanning tree blocks one of them per VLAN, so there is no loop.
 switchport mode access, switchport access vlan
 switchport mode trunk, switchport trunk allowed vlan 10,20,99"""),
 
-    (3300, 230, """VLANS AND SUBNETS
+    ((RIGHT, 630), 230, """VLANS AND SUBNETS
 10  STUDENTS     10.10.8.0/22     20  TEACHERS   10.10.20.0/24
 30  MANAGEMENT   10.10.30.0/24    70  SERVERS    10.10.70.0/24
 99  NETWORK-IT   10.10.99.0/24    998 unused ports, 999 native
 Gateway is always .1 (HSRP), DIST-L3-1 is .2 and DIST-L3-2 is .3.
 Links between routers are /30s from 10.10.0.0, OSPF single area 0."""),
 
-    (3300, 450, """WHO CAN REACH WHAT (ACLs on the distribution switches)
+    ((RIGHT, 630), 450, """WHO CAN REACH WHAT (ACLs on the distribution switches)
 Students:    internet, the school website and DNS only
 Teachers:    servers, students, internet. Not management or IT
 Management:  everything except the IT VLAN
@@ -144,7 +168,7 @@ Internet:    only the school web server, on port 80 and 443"""),
 user admin / RHSadmin, enable secret RHSenable
 SSH from IT-PC1 after typing: crypto key generate rsa (1024)"""),
 
-    (4300, 15, """REDUNDANCY - what takes over when something fails
+    ((RIGHT, 1630), 15, """REDUNDANCY - what takes over when something fails
 ISP link 1 or RHS-EDGE1    -> RHS-EDGE2 (OSPF default route)
 a core switch              -> the other core (OSPF)
 a distribution switch      -> the other one (HSRP moves gateway .1)
@@ -152,14 +176,14 @@ an uplink of a room switch -> its other uplink (Rapid PVST+)
 one cable of a bundle      -> the other cable (LACP EtherChannel)
 EtherChannels: core to core, dist to dist, SW-MDF to each dist."""),
 
-    (4300, 255, """SECURITY ON THE ACCESS SWITCHES
+    ((RIGHT, 1630), 255, """SECURITY ON THE ACCESS SWITCHES
 PortFast + BPDU guard and sticky port security (max 2 MACs)
 DHCP snooping, only the uplinks may answer DHCP
 unused ports are shut down and parked in VLAN 998
 native VLAN 999 is empty, trunks do not negotiate
 SSH version 2 only, and only from the IT VLAN (access-class 10)"""),
 
-    (4300, 470, """THINGS TO TRY (wait a minute after opening for green links)
+    ((RIGHT, 1630), 470, """THINGS TO TRY (wait a minute after opening for green links)
 E230-PC01: ipconfig -> 10.10.8.x, gateway 10.10.8.1
 E230-PC01: ping C214-PC01 works, ping a teacher PC fails
 E230-PC01: browser www.rhs.lab works, ftp 10.10.70.30 fails
@@ -189,10 +213,10 @@ Packet Tracer cannot start other programs, so this is not a real button.
 def positions():
     """{device name: (x, y)} for every device the layout knows."""
     where = {}
-    for y, colour, devices in LAYERS:
+    for y, colour, devices in layers():
         for name, x in devices.items():
             where[name] = (x, y)
-    for number, (title, switch, colour, pcs) in enumerate(ROOMS):
+    for number, (title, switch, colour, pcs) in enumerate(rooms()):
         left = FIRST_ROOM_LEFT + number * ROOM_STEP
         where[switch] = (left + ROOM_WIDTH // 2, SWITCH_Y)
         columns = 4 if len(pcs) > 6 else 2             # 16 PCs in a room, 6 in the office and MDF
@@ -204,18 +228,30 @@ def positions():
 
 def boxes():
     """(left, top, right, bottom, colour) of every coloured box."""
-    found = [(LAYER_LEFT, y - 70, LAYER_RIGHT, y + 70, colour) for y, colour, devices in LAYERS]
-    for number, (title, switch, colour, pcs) in enumerate(ROOMS):
+    m = middle()
+    found = [(m - 390, y - 70, m + 390, y + 70, colour) for y, colour, devices in layers()]
+    for number, (title, switch, colour, pcs) in enumerate(rooms()):
         left = FIRST_ROOM_LEFT + number * ROOM_STEP
         found.append((left, ROOMS_TOP, left + ROOM_WIDTH, ROOMS_BOTTOM, colour))
+    return found
+
+
+def big_notes():
+    """NOTES with the numbers filled in and the right hand columns put next to the layer boxes."""
+    count = len(classrooms())
+    found = []
+    for x, y, text in NOTES:
+        if isinstance(x, tuple):
+            x = middle() + x[1]
+        found.append((x, y, text.format(students=15 * count, teachers=count, rooms=count)))
     return found
 
 
 def notes():
     """(x, y, text) of every note: the big ones above and one title per room. The title is
     at the bottom of the room box, because the uplinks come into the box from the top."""
-    found = list(NOTES)
-    for number, (title, switch, colour, pcs) in enumerate(ROOMS):
+    found = big_notes()
+    for number, (title, switch, colour, pcs) in enumerate(rooms()):
         found.append((FIRST_ROOM_LEFT + number * ROOM_STEP + 10, ROOMS_BOTTOM - 65, title))
     return found
 
@@ -266,7 +302,7 @@ def description_html():
     paragraph = '<p style=" margin-top:0px; margin-bottom:8px; margin-left:0px; margin-right:0px; ' \
                 '-qt-block-indent:0; text-indent:0px;">'
     body = ""
-    for x, y, text in NOTES:
+    for x, y, text in big_notes():
         title, _, rest = text.partition("\n")
         body += f'{paragraph}<span style=" font-weight:700;">{escape(title)}</span><br />' + \
                 escape(rest).replace("\n", "<br />") + "</p>\n"
@@ -285,8 +321,8 @@ def replace_once(xml, pattern, new_text, what):
     return result
 
 
-def arrange(lab_path=LAB, write=True):
-    """Returns the lines of a short report."""
+def arrange(lab_path=LAB, write=True, backup=True):
+    """Returns the lines of a short report. backup=False when the caller already kept a copy."""
     try:
         xml = pktfile.read_pkt(lab_path).decode("utf-8")
     except FileNotFoundError:
@@ -303,7 +339,7 @@ def arrange(lab_path=LAB, write=True):
         name = html.unescape(re.search(r"<NAME[^>]*>([^<]*)</NAME>", device).group(1))
         spot = re.search(r"(<LOGICAL>\s*<X>)([^<]*)(</X>\s*<Y>)([^<]*)(</Y>)", device)
         if name not in where or not spot:
-            if float(spot.group(2)) < 3800 and float(spot.group(4)) < 3000:    # it is on the part we arrange
+            if float(spot.group(4)) < 3000:    # it is on the part we arrange
                 report.append(f"{name} is not in the layout, it stays where it is.")
             return device
         seen.add(name)
@@ -329,10 +365,11 @@ def arrange(lab_path=LAB, write=True):
     report.append(f"{moved} device(s) moved, {len(boxes())} boxes, {len(notes())} notes, description written.")
 
     if write:
-        backup = backup_lab(lab_path)
+        kept = backup_lab(lab_path) if backup else None
         pktfile.write_pkt(lab_path + ".tmp", xml.encode("utf-8"))
         os.replace(lab_path + ".tmp", lab_path)
-        report.append(f"Written to {os.path.basename(lab_path)}. The file from before is in changes/backups/{backup}")
+        report.append(f"Written to {os.path.basename(lab_path)}." +
+                      (f" The file from before is in changes/backups/{kept}" if kept else ""))
         if packet_tracer_is_open():
             report.append("Note: Packet Tracer is running. If this lab is open in it, close the lab WITHOUT "
                           "saving and open it again.")

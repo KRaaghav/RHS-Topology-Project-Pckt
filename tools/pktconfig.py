@@ -82,6 +82,14 @@ class Lab:
             raise Problem(f"Lab file not found: {path}")
         except (ValueError, OSError) as err:
             raise Problem(f"Cannot read {os.path.basename(path)}: {err}")
+        self.use(xml)
+
+    def xml(self):
+        """The whole lab as one text again."""
+        return "".join(self.parts)
+
+    def use(self, xml):
+        """Take this text as the lab from now on (used when devices are added)."""
         # every odd part is one <DEVICE>...</DEVICE>, the even parts are the text in between
         self.parts = re.split(r"(<DEVICE>.*?</DEVICE>)", xml, flags=re.S)
         self.index = {}
@@ -171,7 +179,7 @@ class Lab:
     def save(self, path=None):
         path = path or self.path
         temporary = path + ".tmp"
-        pktfile.write_pkt(temporary, "".join(self.parts).encode("utf-8"))
+        pktfile.write_pkt(temporary, self.xml().encode("utf-8"))
         os.replace(temporary, path)                # the old file is only replaced by a complete new one
 
 

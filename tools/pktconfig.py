@@ -508,6 +508,15 @@ def stp_priority(lines, vlans, priority):
         add(lines, None, f"spanning-tree vlan {list_text(vlans)} priority {priority}")
 
 
+def banner_command(text):
+    """banner motd the way the config keeps it. text is the banner with the character around it."""
+    mark = "^C" if text.startswith("^C") else text[0]
+    if len(text) < 2 * len(mark) or not text.endswith(mark) or mark in text[len(mark):-len(mark)]:
+        raise Problem("The banner has to be on one line and start and end with the same character, "
+                      "like: banner motd #text#")
+    return f"banner motd ^C{text[len(mark):-len(mark)]}^C"
+
+
 def global_command(lines, command, vlan_changes, notes):
     negative = command.startswith("no ")
     body = command[3:] if negative else command
@@ -533,12 +542,7 @@ def global_command(lines, command, vlan_changes, notes):
         return remove(lines, None, "interface " + name, notes)
 
     if body.startswith("banner motd ") and not negative:
-        text = body[len("banner motd "):]
-        mark = "^C" if text.startswith("^C") else text[0]
-        if len(text) < 2 * len(mark) or not text.endswith(mark) or mark in text[len(mark):-len(mark)]:
-            raise Problem("The banner has to be on one line and start and end with the same character, "
-                          "like: banner motd #text#")
-        command = f"banner motd ^C{text[len(mark):-len(mark)]}^C"
+        command = banner_command(body[len("banner motd "):])
 
     match = re.fullmatch(r"(username \S+(?: privilege \d+)? secret|enable secret) (?:(0|5) )?(\S+)", body)
     if match and not negative and match.group(2) != "5":
@@ -711,6 +715,36 @@ def update_config_file(name, script):
         f.write("\n".join(lines) + "\n")
 
 
+def vlan_report(existing, vlan_changes):
+    """The lines of the report for the VLAN database. existing is {number: name} from before the change."""
+    report = []
+    for action, number, vlan_name in vlan_changes:
+        if action == "add" and vlan_name is None:
+            existing.setdefault(number, None)          # the name may come on the next line
+        elif action == "add" and existing.get(number) != vlan_name:
+            report.append(f"+vlan {number} name {vlan_name}   (VLAN database)")
+            existing[number] = vlan_name
+        elif action == "remove" and number in existing:
+            report.append(f"-vlan {number} name {existing.pop(number)}   (VLAN database)")
+    return report + [f"+vlan {n} name VLAN{n:04d}   (VLAN database)" for n, v in existing.items() if v is None]
+
+
+def write_lab(lab, lab_path, scripts, notes):
+    """Save the lab and give the files in ../configs the same change. Returns the file name of the backup."""
+    backup = backup_lab(lab_path)
+    lab.save()
+    if os.path.abspath(lab_path) == os.path.abspath(LAB):
+        for name, script in scripts.items():
+            try:
+                update_config_file(name, script)
+            except Problem as err:
+                notes.append(f"configs/{name}.txt was not updated: {err}")
+    if packet_tracer_is_open():
+        notes.append("Packet Tracer is running. If this lab is open in it, close the lab WITHOUT saving "
+                     "and open it again. Saving there would put the old configs back.")
+    return backup
+
+
 def apply(scripts, lab_path=LAB, write=True):
     """scripts is {device name: commands as text}. Every script is checked first. If one
     has a mistake nothing is written at all.
@@ -728,16 +762,7 @@ def apply(scripts, lab_path=LAB, write=True):
         notes += [f"{name}: {note}" for note in device_notes]
 
         report = [line for line in difflib.unified_diff(old, new, lineterm="", n=1) if not line.startswith(("---", "+++"))]
-        existing = lab.vlans(name)
-        for action, number, vlan_name in vlan_changes:
-            if action == "add" and vlan_name is None:
-                existing.setdefault(number, None)          # the name may come on the next line
-            elif action == "add" and existing.get(number) != vlan_name:
-                report.append(f"+vlan {number} name {vlan_name}   (VLAN database)")
-                existing[number] = vlan_name
-            elif action == "remove" and number in existing:
-                report.append(f"-vlan {number} name {existing.pop(number)}   (VLAN database)")
-        report += [f"+vlan {n} name VLAN{n:04d}   (VLAN database)" for n, v in existing.items() if v is None]
+        report += vlan_report(lab.vlans(name), vlan_changes)
         changes[name] = "\n".join(report) if report else "Nothing to change, the config already has this."
 
         if new != old:
@@ -745,19 +770,7 @@ def apply(scripts, lab_path=LAB, write=True):
         if vlan_changes:
             lab.change_vlans(name, vlan_changes)
 
-    backup = None
-    if write:
-        backup = backup_lab(lab_path)
-        lab.save()
-        if os.path.abspath(lab_path) == os.path.abspath(LAB):
-            for name, script in scripts.items():
-                try:
-                    update_config_file(name, script)
-                except Problem as err:
-                    notes.append(f"configs/{name}.txt was not updated: {err}")
-        if packet_tracer_is_open():
-            notes.append("Packet Tracer is running. If this lab is open in it, close the lab WITHOUT saving "
-                         "and open it again. Saving there would put the old configs back.")
+    backup = write_lab(lab, lab_path, scripts, notes) if write else None
     return {"changes": changes, "notes": notes, "backup": backup}
 
 
@@ -829,6 +842,26 @@ def apply_command(lab_path, args, write):
     return 0
 
 
+def run_command(lab_path, args, write):
+    """Run the command in args. Returns its exit code, or None when args is not a command."""
+    if args == ["list"]:
+        return list_devices(lab_path)
+    if len(args) == 2 and args[0] == "show":
+        return show(lab_path, args[1])
+    if args == ["check"]:
+        return check(lab_path)
+    if args and args[0] == "apply":
+        return apply_command(lab_path, args[1:], write)
+    if args == ["backups"]:
+        print("\n".join(backups()) or "No backups yet.")
+        return 0
+    if len(args) == 2 and args[0] == "restore":
+        kept = restore(args[1], lab_path)
+        print(f"{args[1]} is the lab again. The lab from just before is in changes/backups/{kept}")
+        return 0
+    return None
+
+
 def main(args):
     lab_path = LAB
     if "--lab" in args:
@@ -841,29 +874,17 @@ def main(args):
     write = "--dry-run" not in args
     args = [a for a in args if a != "--dry-run"]
     try:
-        if args == ["list"]:
-            return list_devices(lab_path)
-        if len(args) == 2 and args[0] == "show":
-            return show(lab_path, args[1])
-        if args == ["check"]:
-            return check(lab_path)
-        if args and args[0] == "apply":
-            return apply_command(lab_path, args[1:], write)
-        if args == ["backups"]:
-            print("\n".join(backups()) or "No backups yet.")
-            return 0
-        if len(args) == 2 and args[0] == "restore":
-            kept = restore(args[1], lab_path)
-            print(f"{args[1]} is the lab again. The lab from just before is in changes/backups/{kept}")
-            return 0
+        code = run_command(lab_path, args, write)
     except Problem as err:
         print("Problem:", err)
         return 1
     except OSError as err:
         print("Problem:", err)
         return 1
-    print(__doc__)
-    return 2
+    if code is None:
+        print(__doc__)
+        return 2
+    return code
 
 
 if __name__ == "__main__":

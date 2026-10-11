@@ -78,10 +78,9 @@ def load_plan(path):
     return plan, problems
 
 
-def check_plan(path):
-    plan, problems = load_plan(path)
-
-    # gateway must be a usable address inside its own subnet
+def gateway_problems(plan):
+    """A gateway must be a usable address inside its own subnet."""
+    problems = []
     for name, (net, gw, vlan) in plan.items():
         if gw is None:
             continue
@@ -89,6 +88,12 @@ def check_plan(path):
             problems.append(f"{name}: gateway {gw} is not inside {net}")
         elif gw in (net.network_address, net.broadcast_address):
             problems.append(f"{name}: gateway {gw} is the network or broadcast address")
+    return problems
+
+
+def check_plan(path):
+    plan, problems = load_plan(path)
+    problems += gateway_problems(plan)
 
     # no two subnets may overlap
     names = list(plan)
@@ -113,6 +118,20 @@ def check_plan(path):
 
 
 # ---------------------------------------------------------------- inventory
+
+def address_problems(name, ip, network, net, gw, used_ips):
+    """What is wrong with the fixed address of one device."""
+    problems = []
+    if ip not in net:
+        problems.append(f"{name}: {ip} is not in {network} {net}")
+    elif net.prefixlen < 31 and ip in (net.network_address, net.broadcast_address):
+        problems.append(f"{name}: {ip} is the network or broadcast address of {net}")
+    if gw is not None and ip == gw:
+        problems.append(f"{name}: {ip} is the gateway address of {network}")
+    if ip in used_ips:
+        problems.append(f"{name}: {ip} is already used by {used_ips[ip]}")
+    return problems
+
 
 def check_inventory(inv_path, plan_path):
     plan, problems = load_plan(plan_path)
@@ -147,14 +166,7 @@ def check_inventory(inv_path, plan_path):
                 problems.append(f"{name}: '{ip_text}' is not a valid IP address")
                 continue
 
-            if ip not in net:
-                problems.append(f"{name}: {ip} is not in {network} {net}")
-            elif net.prefixlen < 31 and ip in (net.network_address, net.broadcast_address):
-                problems.append(f"{name}: {ip} is the network or broadcast address of {net}")
-            if gw is not None and ip == gw:
-                problems.append(f"{name}: {ip} is the gateway address of {network}")
-            if ip in used_ips:
-                problems.append(f"{name}: {ip} is already used by {used_ips[ip]}")
+            problems += address_problems(name, ip, network, net, gw, used_ips)
             used_ips[ip] = name
 
     # does every network have room for the devices in it?

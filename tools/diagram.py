@@ -42,15 +42,10 @@ def node(name, x, y, colour, width=112):
             + text(x, y + 4.5, name, 12, "600") + "</g>")
 
 
-def svg(lab_path=LAB):
-    """The whole picture as SVG text."""
-    p = labtest.Picture(lab_path)
-    plan = labtest.read_csv("plan.csv")
+def layer_parts(where):
+    """The bands of the layers with their titles. Puts the place of every router and switch in where."""
     middle = WIDTH / 2 + 60
-    where = {}
     parts = []
-
-    # the layers
     for title, y, names in ROWS:
         colour = COLOURS[title.split()[0]]
         parts.append(f'<rect x="150" y="{y - 34}" width="{WIDTH - 170}" height="68" rx="10" fill="{colour}" opacity="0.45"/>')
@@ -61,16 +56,14 @@ def svg(lab_path=LAB):
             where["ISP"], where["INET-SRV"] = (middle, y), (middle + 220, y)
         else:
             where[names[0]], where[names[1]] = (middle - 170, y), (middle + 170, y)
+    return parts
 
-    # the access switches in one row, each with what is plugged into it
-    layout = pktlayout.rooms()
-    order = [room[1] for room in layout]
-    access = sorted(p.access, key=lambda name: order.index(name) if name in order else len(order))
+
+def access_parts(p, where, access, step):
+    """The access switches in one row, each with what is plugged into it."""
     labels = pktlayout.room_labels()
-    step = (WIDTH - 170) / len(access)
-    parts.append(text(20, ACCESS_Y - 4, "Access", 12, "700", "start"))
-    parts.append(text(20, ACCESS_Y + 12, "one switch per room", 10.5, "400", "start", "#5f6c7a"))
-    boxes = []
+    boxes = [text(20, ACCESS_Y - 4, "Access", 12, "700", "start"),
+             text(20, ACCESS_Y + 12, "one switch per room", 10.5, "400", "start", "#5f6c7a")]
     wing_span = {}
     for i, switch in enumerate(access):
         x = 150 + step * (i + 0.5)
@@ -101,8 +94,11 @@ def svg(lab_path=LAB):
         boxes.append(f'<line x1="{xs[0] - step / 2 + 8:.0f}" y1="{y}" x2="{xs[-1] + step / 2 - 8:.0f}" y2="{y}" '
                      f'stroke="#b8862b" stroke-width="3"/>')
         boxes.append(text((xs[0] + xs[-1]) / 2, y + 18, f"{wing} wing", 12, "700"))
+    return boxes
 
-    # the cables between routers and switches. Two cables between the same pair are an EtherChannel
+
+def cable_parts(p, where):
+    """The cables between routers and switches. Two cables between the same pair are an EtherChannel."""
     pairs = {}
     for a, a_port, b, b_port in p.links:
         if a in where and b in where:
@@ -114,16 +110,11 @@ def svg(lab_path=LAB):
                      f'stroke-width="{1.1 if count == 1 else 3.2}" opacity="{0.55 if count == 1 else 0.9}"/>')
         if count > 1:
             lines.append(text((x1 + x2) / 2, (y1 + y2) / 2 - 6, f"LACP x{count}", 9.5, "600", "middle", "#44515e"))
+    return lines
 
-    nodes = []
-    for title, y, names in ROWS:
-        for name in names:
-            nodes.append(node(name, *where[name], "#ffffff"))
-    for switch in access:
-        nodes.append(node(switch, *where[switch], "#ffffff", min(104, step - 14)))
 
-    # the VLAN and subnet table
-    top = ACCESS_Y + 200
+def table_parts(p, plan, top):
+    """The VLAN and subnet table with the notes next to it, and how many rows high it is."""
     table = [text(150, top, "VLANs and subnets", 13, "700", "start")]
     column = [150, 190, 330, 480, 620]
     for x, title in zip(column, ["", "VLAN", "Name", "Subnet", "Gateway (HSRP)"]):
@@ -143,8 +134,33 @@ def svg(lab_path=LAB):
              f"{len(p.devices)} devices, {len(p.hosts)} PCs and servers, {len(p.links)} cables"]
     for i, words in enumerate(notes):
         table.append(text(800, top + 22 + 19 * i, words, 11.5, "400", "start", "#18212b" if i < 3 else "#5f6c7a"))
+    return table, max(row, len(notes))
 
-    height = top + 60 + 19 * max(row, len(notes))
+
+def svg(lab_path=LAB):
+    """The whole picture as SVG text."""
+    p = labtest.Picture(lab_path)
+    plan = labtest.read_csv("plan.csv")
+    where = {}
+    parts = layer_parts(where)
+
+    layout = pktlayout.rooms()
+    order = [room[1] for room in layout]
+    access = sorted(p.access, key=lambda name: order.index(name) if name in order else len(order))
+    step = (WIDTH - 170) / len(access)
+    boxes = access_parts(p, where, access, step)
+    lines = cable_parts(p, where)
+
+    nodes = []
+    for title, y, names in ROWS:
+        for name in names:
+            nodes.append(node(name, *where[name], "#ffffff"))
+    for switch in access:
+        nodes.append(node(switch, *where[switch], "#ffffff", min(104, step - 14)))
+
+    top = ACCESS_Y + 200
+    table, rows = table_parts(p, plan, top)
+    height = top + 60 + 19 * rows
     return (f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {WIDTH} {height}" '
             f'font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif">\n'
             f'<rect width="{WIDTH}" height="{height}" fill="#ffffff"/>\n'

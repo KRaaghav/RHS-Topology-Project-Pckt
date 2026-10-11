@@ -28,7 +28,7 @@ ROWS = [("Internet", 60, ["ISP", "INET-SRV"]),
 ACCESS_Y = 500
 COLOURS = {"Internet": "#e8e8e8", "Edge": "#ffd8d8", "Core": "#e4daff", "Distribution": "#d0e2ff",
            "room": "#ffffb0", "office": "#d0f8d0", "mdf": "#b8f8f8"}
-VLAN_COLOURS = {"10": "#f2c94c", "20": "#f2994a", "30": "#6fcf97", "70": "#56ccf2", "99": "#bb6bd9"}
+VLAN_COLOURS = {"10": "#f2c94c", "20": "#f2994a", "30": "#6fcf97", "40": "#eb5757", "70": "#56ccf2", "99": "#bb6bd9"}
 
 
 def text(x, y, words, size=12, weight="400", anchor="middle", colour="#18212b"):
@@ -86,7 +86,8 @@ def access_parts(p, where, access, step):
         for row, vlan in enumerate(sorted(counts, key=int)):
             y = ACCESS_Y + 58 + 17 * row
             boxes.append(f'<circle cx="{x - step / 2 + 18}" cy="{y - 4}" r="4.5" fill="{VLAN_COLOURS.get(vlan, "#999")}"/>')
-            what = "servers" if vlan == "70" else "PCs" if counts[vlan] != 1 else "PC"
+            what = "servers" if vlan == "70" else "things" if vlan == "40" and counts[vlan] != 1 else \
+                "thing" if vlan == "40" else "PCs" if counts[vlan] != 1 else "PC"
             boxes.append(text(x - step / 2 + 27, y, f"{counts[vlan]} {what} VLAN {vlan}", 9.5, "400", "start"))
 
     for wing, xs in wing_span.items():

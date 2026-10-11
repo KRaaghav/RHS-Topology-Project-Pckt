@@ -17,7 +17,7 @@ enable secret 5 $1$mERr$dhyo12P3gD/LuaJsTJfgG.
 !
 !
 ! ---- DHCP snooping: only trusted ports (the uplinks) may answer DHCP, stops fake DHCP servers
-ip dhcp snooping vlan 10,20
+ip dhcp snooping vlan 10,20,40
 no ip dhcp snooping information option
 ip dhcp snooping
 !
@@ -230,12 +230,20 @@ interface FastEthernet0/16
  spanning-tree portfast
  spanning-tree bpduguard enable
 !
-! ---- Unused ports: put in parking VLAN 998 and shut down
+! ---- Building things (smartboard, camera, bell, printer...): VLAN 40, protected like a PC port
 interface FastEthernet0/17
- switchport access vlan 998
+ description Room E203 - smartboard
+ switchport access vlan 40
  switchport mode access
- shutdown
+ switchport port-security
+ switchport port-security maximum 2
+ switchport port-security mac-address sticky
+ switchport port-security violation restrict
+ ip dhcp snooping limit rate 15
+ spanning-tree portfast
+ spanning-tree bpduguard enable
 !
+! ---- Unused ports: put in parking VLAN 998 and shut down
 interface FastEthernet0/18
  switchport access vlan 998
  switchport mode access
@@ -275,7 +283,7 @@ interface FastEthernet0/24
 interface GigabitEthernet0/1
  description Trunk to DIST-L3-1 Gi1/0/8
  switchport trunk native vlan 999
- switchport trunk allowed vlan 10,20,99
+ switchport trunk allowed vlan 10,20,40,99
  switchport mode trunk
  switchport nonegotiate
  ip dhcp snooping trust
@@ -283,7 +291,7 @@ interface GigabitEthernet0/1
 interface GigabitEthernet0/2
  description Trunk to DIST-L3-2 Gi1/0/8
  switchport trunk native vlan 999
- switchport trunk allowed vlan 10,20,99
+ switchport trunk allowed vlan 10,20,40,99
  switchport mode trunk
  switchport nonegotiate
  ip dhcp snooping trust

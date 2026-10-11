@@ -31,8 +31,8 @@ HEALTH = os.path.join(HERE, "..", "changes", "health.csv")
 DISTS = ["DIST-L3-1", "DIST-L3-2"]
 BACKBONE = ["RHS-EDGE1", "RHS-EDGE2", "CORE-L3-1", "CORE-L3-2"] + DISTS
 OUTSIDE = ["ISP", "INET-SRV"]              # not part of the school
-USER_VLANS = [10, 20, 30, 70, 99]
-DHCP_VLANS = [10, 20, 30]                  # the servers and the IT PCs have static addresses
+USER_VLANS = [10, 20, 30, 40, 70, 99]
+DHCP_VLANS = [10, 20, 30, 40]              # the servers and the IT PCs have static addresses
 
 
 # ---------------------------------------------------------------- reading the lab
@@ -159,13 +159,15 @@ def test_single_failure(p):
 
 
 def test_port_security(p):
+    """Every port a PC or a building thing (smartboard, camera...) is plugged into. Not the servers."""
+    servers = {row["name"] for row in read_csv("inventory.csv") if row["type"] == "server"}
     total = 0
     wrong = []
     for switch in p.access:
         ports = p.ports(switch)
         for port, (other, other_port) in p.cabled(switch).items():
             lines = ports.get(port, [])
-            if other in p.hosts and re.fullmatch(r"(.*-PC\d+|.*-TCHR|.*-PC)", other):
+            if other in p.hosts and other not in servers:
                 total += 1
                 if "switchport port-security" not in lines:
                     wrong.append(f"{switch} {port} ({other}): no port security")
@@ -331,10 +333,11 @@ TESTS = [
     ("root-gateway", "Redundancy", "VLANs where the spanning tree root is also the HSRP active switch", "VLANs",
      test_root_matches_gateway, False),
     ("trunks", "Switching", "Trunk cables with the same allowed and native VLANs on both ends", "trunks", test_trunks, False),
-    ("host-vlans", "Switching", "PCs and servers plugged into a port of the right VLAN", "hosts", test_host_vlans, False),
+    ("host-vlans", "Switching", "PCs, servers and building things plugged into a port of the right VLAN", "hosts",
+     test_host_vlans, False),
     ("dhcp-relay", "Switching", "Gateway interfaces that relay DHCP to SRV-DHCP", "interfaces", test_dhcp_relay, False),
     ("address-room", "Switching", "Fullest subnet (lower is better)", "% used", test_address_room, True),
-    ("port-security", "Security", "PC ports with port security", "ports", test_port_security, False),
+    ("port-security", "Security", "PC and building thing ports with port security", "ports", test_port_security, False),
     ("edge-ports", "Security", "Host ports with PortFast and BPDU guard", "ports", test_edge_ports, False),
     ("unused-ports", "Security", "Ports without a cable that are shut down", "ports", test_unused_ports, False),
     ("ssh-only", "Security", "Devices that only allow SSH version 2 for remote login", "devices", test_ssh_only, False),

@@ -35,43 +35,86 @@ from pktconfig import HERE, LAB, Problem, backup_lab, packet_tracer_is_open
 # ---------------------------------------------------------------- where everything goes
 # All numbers are pixels on the canvas. A device position is the middle of its icon.
 
-ROOM_WIDTH = 600
-ROOM_STEP = 660                 # room width plus the gap to the next room
-ROOMS_TOP, ROOMS_BOTTOM = 930, 1810
+ROOM_WIDTH = 320
+ROOM_GAP = 30                   # between two rooms of the same wing
+WING_GAP = 110                  # between two wings
+ROOMS_TOP, ROOMS_BOTTOM = 930, 2290
 FIRST_ROOM_LEFT = 60
 SWITCH_Y = 1060
-PC_ROWS = [1220, 1370, 1520, 1670]
+PC_ROWS = [1210 + 130 * n for n in range(8)]       # two PCs next to each other, eight rows
+WING_BAR = (ROOMS_BOTTOM + 20, ROOMS_BOTTOM + 80)  # the bar with the wing name under its rooms
+BOTTOM_Y = ROOMS_BOTTOM + 120                      # the notes under everything
+WINGS = "ECB"                   # the order of the wings on the canvas, other letters come after
 
 # colours of the boxes (red, green, blue)
 GREY, RED, PURPLE, BLUE = (232, 232, 232), (255, 216, 216), (228, 218, 255), (208, 226, 255)
 GREEN, YELLOW, CYAN = (208, 248, 208), (255, 255, 176), (184, 248, 248)
+ORANGE = (255, 224, 178)
 
 OFFICE_PCS = ["PRINCIPAL-PC", "ASST-PRINCIPAL-PC", "COUNSELOR1-PC", "COUNSELOR2-PC", "REGISTRAR-PC",
               "FRONT-OFFICE-PC"]
 MDF_DEVICES = ["SRV-DHCP", "SRV-DNS-WEB", "SRV-LOG", "SRV-FILE", "IT-PC1", "IT-PC2"]
 
 
-def classrooms():
-    """The room numbers, from the 2960 switches in inventory.csv (SW-E230 -> E230).
-    pktbuild.py adds a line there when it adds a room, so the layout follows by itself."""
+def room_labels():
+    """{room number: its name} for rooms that have one, like C114: Library. The name is in
+    the location of the switch in inventory.csv: Room C114 (Library)."""
+    found = {}
     with open(os.path.join(HERE, "inventory.csv"), newline="") as f:
-        return [row["name"][3:] for row in csv.DictReader(f)
-                if row["type"] == "switch 2960" and row["name"].startswith("SW-")]
+        for row in csv.DictReader(f):
+            match = re.fullmatch(r"Room (\w+) \((.+)\)", row["location"])
+            if match and row["type"] == "switch 2960":
+                found[match.group(1)] = match.group(2)
+    return found
+
+
+def classrooms():
+    """The room numbers, from the 2960 switches in inventory.csv (SW-E230 -> E230), in the
+    order they stand on the canvas: by wing, then by floor and number. E230 is wing E, floor 2.
+    pktbuild.py adds a line to the inventory when it adds a room, so the layout follows by itself."""
+    with open(os.path.join(HERE, "inventory.csv"), newline="") as f:
+        found = [row["name"][3:] for row in csv.DictReader(f)
+                 if row["type"] == "switch 2960" and row["name"].startswith("SW-")]
+    return sorted(found, key=lambda room: (WINGS.index(room[0]) if room[0] in WINGS else len(WINGS), room))
+
+
+def wings():
+    """{wing letter: {floor: [rooms]}} in canvas order."""
+    found = {}
+    for room in classrooms():
+        found.setdefault(room[0], {}).setdefault(room[1], []).append(room)
+    return found
 
 
 def rooms():
-    """(name on the room note, access switch, colour, PCs from left to right and top to bottom)"""
-    found = [("Main office + counseling\nVLAN 30 MANAGEMENT", "SW-OFFICE", GREEN, OFFICE_PCS)]
+    """(lines of the room note, access switch, colour, PCs left to right and top to bottom, wing)"""
+    labels = room_labels()
+    found = [("Main office + counseling\nVLAN 30 MANAGEMENT", "SW-OFFICE", GREEN, OFFICE_PCS, "office")]
     for room in classrooms():
-        found.append((f"Room {room}\nVLAN 10 students (15), VLAN 20 teacher", "SW-" + room, YELLOW,
-                      [f"{room}-PC{n:02d}" for n in range(1, 16)] + [room + "-TCHR"]))
-    found.append(("MDF (server room) + IT office\nVLAN 70 SERVERS, VLAN 99 NETWORK-IT", "SW-MDF", CYAN, MDF_DEVICES))
+        name = f"Room {room} - {labels[room]}" if room in labels else f"Room {room} (floor {room[1]})"
+        found.append((f"{name}\n15 students VLAN 10\n1 teacher VLAN 20", "SW-" + room, YELLOW,
+                      [f"{room}-PC{n:02d}" for n in range(1, 16)] + [room + "-TCHR"], room[0]))
+    found.append(("MDF (server room) + IT office\nVLAN 70 SERVERS\nVLAN 99 NETWORK-IT", "SW-MDF", CYAN,
+                  MDF_DEVICES, "mdf"))
     return found
+
+
+def room_lefts():
+    """The left edge of every room box. Rooms of one wing stand together."""
+    lefts = []
+    x = FIRST_ROOM_LEFT
+    before = None
+    for title, switch, colour, pcs, wing in rooms():
+        if before is not None:
+            x += ROOM_WIDTH + (ROOM_GAP if wing == before else WING_GAP)
+        lefts.append(x)
+        before = wing
+    return lefts
 
 
 def middle():
     """The routers and layer 3 switches are centred above the row of rooms."""
-    return FIRST_ROOM_LEFT + ((len(rooms()) - 1) * ROOM_STEP + ROOM_WIDTH) // 2
+    return (FIRST_ROOM_LEFT + room_lefts()[-1] + ROOM_WIDTH) // 2
 
 
 def layers():
@@ -164,7 +207,7 @@ Network IT:  everything, and the only VLAN that may SSH to devices
 Servers:     may answer, may not start a connection into the school
 Internet:    only the school web server, on port 80 and 443"""),
 
-    (1300, 1840, """LOGINS (every router and switch, console included)
+    (1300, BOTTOM_Y, """LOGINS (every router and switch, console included)
 user admin / RHSadmin, enable secret RHSenable
 SSH from IT-PC1 after typing: crypto key generate rsa (1024)"""),
 
@@ -192,17 +235,17 @@ IT-PC1: ping anything, ssh -l admin 10.10.99.11
 DIST-L3-1: show standby brief, show etherchannel summary
 Break it: shutdown g0/0/0 on RHS-EDGE1 while a ping -t runs"""),
 
-    (60, 1840, """SERVERS (VLAN 70, static addresses)
+    (60, BOTTOM_Y, """SERVERS (VLAN 70, static addresses)
 SRV-DHCP 10.10.70.5 (DHCP for VLAN 10, 20, 30)     SRV-DNS-WEB 10.10.70.10 (DNS + www.rhs.lab)
 SRV-LOG 10.10.70.20 (syslog + NTP)                 SRV-FILE 10.10.70.30 (FTP for staff)
 IT-PC1 10.10.99.50, IT-PC2 10.10.99.51. Switch management: 10.10.99.11-16 rooms, .21 office, .22 MDF"""),
 
-    (2200, 1840, """MORE IN THE PROJECT FOLDER
+    (2200, BOTTOM_Y, """MORE IN THE PROJECT FOLDER
 README.md explains every design choice, WALKTHROUGH.md builds it step by step.
 configs/ has the config of every device with comments. tools/ has the Python programs
 that check the addressing plan and write config changes straight into this file."""),
 
-    (3300, 1840, """CHANGE CONFIGS WITH BUTTONS (NetCheck)
+    (3300, BOTTOM_Y, """CHANGE CONFIGS WITH BUTTONS (NetCheck)
 Packet Tracer cannot start other programs, so this is not a real button.
 1. Save and close this lab.   2. Double click "Start NetCheck.command"
 (in the tools folder). The page opens at http://127.0.0.1:8765
@@ -216,23 +259,34 @@ def positions():
     for y, colour, devices in layers():
         for name, x in devices.items():
             where[name] = (x, y)
-    for number, (title, switch, colour, pcs) in enumerate(rooms()):
-        left = FIRST_ROOM_LEFT + number * ROOM_STEP
+    for left, (title, switch, colour, pcs, wing) in zip(room_lefts(), rooms()):
         where[switch] = (left + ROOM_WIDTH // 2, SWITCH_Y)
-        columns = 4 if len(pcs) > 6 else 2             # 16 PCs in a room, 6 in the office and MDF
         for i, pc in enumerate(pcs):
-            x = left + ROOM_WIDTH * (2 * (i % columns) + 1) // (2 * columns)
-            where[pc] = (x, PC_ROWS[i // columns])
+            where[pc] = (left + ROOM_WIDTH * (2 * (i % 2) + 1) // 4, PC_ROWS[i // 2])
     return where
+
+
+def wing_bars():
+    """(left, right, text) of the bar under every wing."""
+    lefts = dict(zip((room[1][3:] for room in rooms()), room_lefts()))
+    found = []
+    for wing, floors in wings().items():
+        all_rooms = [room for floor in floors.values() for room in floor]
+        text = f"{wing} WING     " + "     ".join(f"floor {floor}: {', '.join(floors[floor])}" for floor in sorted(floors))
+        found.append((lefts[all_rooms[0]], lefts[all_rooms[-1]] + ROOM_WIDTH, text))
+    return found
 
 
 def boxes():
     """(left, top, right, bottom, colour) of every coloured box."""
     m = middle()
     found = [(m - 390, y - 70, m + 390, y + 70, colour) for y, colour, devices in layers()]
-    for number, (title, switch, colour, pcs) in enumerate(rooms()):
-        left = FIRST_ROOM_LEFT + number * ROOM_STEP
-        found.append((left, ROOMS_TOP, left + ROOM_WIDTH, ROOMS_BOTTOM, colour))
+    for left, (title, switch, colour, pcs, wing) in zip(room_lefts(), rooms()):
+        # the office and the MDF have six devices, their box is shorter
+        bottom = ROOMS_BOTTOM if len(pcs) > 6 else PC_ROWS[2] + 190
+        found.append((left, ROOMS_TOP, left + ROOM_WIDTH, bottom, colour))
+    for left, right, text in wing_bars():
+        found.append((left, WING_BAR[0], right, WING_BAR[1], ORANGE))
     return found
 
 
@@ -248,11 +302,14 @@ def big_notes():
 
 
 def notes():
-    """(x, y, text) of every note: the big ones above and one title per room. The title is
-    at the bottom of the room box, because the uplinks come into the box from the top."""
+    """(x, y, text) of every note: the big ones above, one title per room and one per wing.
+    The title is at the bottom of the room box, because the uplinks come into the box from the top."""
     found = big_notes()
-    for number, (title, switch, colour, pcs) in enumerate(rooms()):
-        found.append((FIRST_ROOM_LEFT + number * ROOM_STEP + 10, ROOMS_BOTTOM - 65, title))
+    for left, (title, switch, colour, pcs, wing) in zip(room_lefts(), rooms()):
+        bottom = ROOMS_BOTTOM if len(pcs) > 6 else PC_ROWS[2] + 190
+        found.append((left + 10, bottom - 26 * len(title.split("\n")) - 12, title))
+    for left, right, text in wing_bars():
+        found.append((left + 14, WING_BAR[0] + 17, text))
     return found
 
 
@@ -339,7 +396,7 @@ def arrange(lab_path=LAB, write=True, backup=True):
         name = html.unescape(re.search(r"<NAME[^>]*>([^<]*)</NAME>", device).group(1))
         spot = re.search(r"(<LOGICAL>\s*<X>)([^<]*)(</X>\s*<Y>)([^<]*)(</Y>)", device)
         if name not in where or not spot:
-            if float(spot.group(4)) < 3000:    # it is on the part we arrange
+            if float(spot.group(4)) < 3500:    # it is on the part we arrange
                 report.append(f"{name} is not in the layout, it stays where it is.")
             return device
         seen.add(name)

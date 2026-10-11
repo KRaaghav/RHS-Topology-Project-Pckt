@@ -460,6 +460,8 @@ something like 10.10.70.300, and run the inventory check again.
   returns a measured number, a target and the list of things that are wrong. The single failure
   test removes one device or cable at a time and walks the cables from the ISP to see which
   hosts can still be reached
+- `floorplan.py` reads the wing and the floor from each room number (E230 = wing E, floor 2) and
+  draws the rooms of the lab into a made up building
 - `diagram.py` writes the topology picture as SVG text, with positions worked out from the
   number of access switches
 - `netcheck_ui.py` is a very small web server that only this computer can reach. A button on

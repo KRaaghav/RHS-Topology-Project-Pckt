@@ -16,10 +16,11 @@ import os
 import sys
 
 import labtest
+import pktlayout
 from pktconfig import HERE, LAB, Problem
 
 OUT = os.path.join(HERE, "..", "topology.svg")
-WIDTH = 1320
+WIDTH = 1620
 ROWS = [("Internet", 60, ["ISP", "INET-SRV"]),
         ("Edge (2911)\nNAT, default route", 160, ["RHS-EDGE1", "RHS-EDGE2"]),
         ("Core (3650)\nOSPF routing only", 260, ["CORE-L3-1", "CORE-L3-2"]),
@@ -63,11 +64,16 @@ def svg(lab_path=LAB):
             where[names[0]], where[names[1]] = (middle - 170, y), (middle + 170, y)
 
     # the access switches in one row, each with what is plugged into it
-    step = (WIDTH - 170) / len(p.access)
+    layout = pktlayout.rooms()
+    order = [room[1] for room in layout]
+    access = sorted(p.access, key=lambda name: order.index(name) if name in order else len(order))
+    labels = pktlayout.room_labels()
+    step = (WIDTH - 170) / len(access)
     parts.append(text(20, ACCESS_Y - 4, "Access", 12, "700", "start"))
     parts.append(text(20, ACCESS_Y + 12, "one switch per room", 10.5, "400", "start", "#5f6c7a"))
     boxes = []
-    for i, switch in enumerate(p.access):
+    wing_span = {}
+    for i, switch in enumerate(access):
         x = 150 + step * (i + 0.5)
         where[switch] = (x, ACCESS_Y)
         counts = {}
@@ -77,14 +83,24 @@ def svg(lab_path=LAB):
                 vlan = labtest.value_after(ports.get(port, []), "switchport access vlan ") or "?"
                 counts[vlan] = counts.get(vlan, 0) + 1
         kind = "office" if switch == "SW-OFFICE" else "mdf" if switch == "SW-MDF" else "room"
-        height = 30 + 17 * len(counts)
+        room = switch[3:]
+        if kind == "room":
+            wing_span.setdefault(room[0], []).append(x)
+        about = {"office": "Main office", "mdf": "Server room, IT"}.get(kind) or labels.get(room) or f"floor {room[1]}"
+        boxes.append(text(x, ACCESS_Y + 36, about, 10.5, "600"))
+        height = 48 + 17 * len(counts)
         boxes.append(f'<rect x="{x - step / 2 + 5}" y="{ACCESS_Y - 30}" width="{step - 10}" height="{height + 34}" rx="9" '
                      f'fill="{COLOURS[kind]}" opacity="0.6"/>')
         for row, vlan in enumerate(sorted(counts, key=int)):
-            y = ACCESS_Y + 40 + 17 * row
+            y = ACCESS_Y + 58 + 17 * row
             boxes.append(f'<circle cx="{x - step / 2 + 18}" cy="{y - 4}" r="4.5" fill="{VLAN_COLOURS.get(vlan, "#999")}"/>')
             what = "servers" if vlan == "70" else "PCs" if counts[vlan] != 1 else "PC"
-            boxes.append(text(x - step / 2 + 27, y, f"{counts[vlan]} {what} VLAN {vlan}", 10.5, "400", "start"))
+            boxes.append(text(x - step / 2 + 27, y, f"{counts[vlan]} {what} VLAN {vlan}", 9.5, "400", "start"))
+
+    for wing, xs in wing_span.items():
+        y = ACCESS_Y + 132
+        boxes.append(f'<line x1="{xs[0] - step / 2 + 8:.0f}" y1="{y}" x2="{xs[-1] + step / 2 - 8:.0f}" y2="{y}" stroke="#b8862b" stroke-width="3"/>')
+        boxes.append(text((xs[0] + xs[-1]) / 2, y + 18, f"{wing} wing", 12, "700"))
 
     # the cables between routers and switches. Two cables between the same pair are an EtherChannel
     pairs = {}
@@ -103,11 +119,11 @@ def svg(lab_path=LAB):
     for title, y, names in ROWS:
         for name in names:
             nodes.append(node(name, *where[name], "#ffffff"))
-    for switch in p.access:
-        nodes.append(node(switch, *where[switch], "#ffffff", min(104, step - 16)))
+    for switch in access:
+        nodes.append(node(switch, *where[switch], "#ffffff", min(104, step - 14)))
 
     # the VLAN and subnet table
-    top = ACCESS_Y + 150
+    top = ACCESS_Y + 200
     table = [text(150, top, "VLANs and subnets", 13, "700", "start")]
     column = [150, 190, 330, 480, 620]
     for x, title in zip(column, ["", "VLAN", "Name", "Subnet", "Gateway (HSRP)"]):

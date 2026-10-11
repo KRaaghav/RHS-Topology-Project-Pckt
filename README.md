@@ -16,10 +16,15 @@ OSPF move traffic to the other device when one fails.
 **Why this way.** VLANs by role (not by room) mean one set of rules for all students wherever
 they sit. Putting the gateways and ACLs on the distribution layer keeps the core simple. Two
 uplinks per room switch cost one extra cable per room and remove every single point of failure
-between a room and the internet: `tools/labtest.py` breaks all 42 backbone devices and cables
-one at a time and counts that all 140 PCs and servers still have a path out.
+between a room and the internet: `tools/labtest.py` breaks all 50 backbone devices and cables
+one at a time and counts that all 204 PCs and servers still have a path out.
 
 ![Topology of the lab](topology.svg)
+
+Where it would all be in a building. The sketch is made up (it is not the real RHS floor plan),
+the coloured rooms are the ones in the lab:
+
+![Sketch of the building](floorplan.svg)
 
 Other files in this folder:
 
@@ -34,18 +39,21 @@ Other files in this folder:
   - `pktbuild.py` adds a whole classroom (switch, 16 PCs, cables, uplinks, configs) to the lab with one command
   - `labtest.py` runs measurable tests on the lab file (redundancy, VLANs, security, monitoring) and keeps a history of the score
   - `diagram.py` draws `topology.svg` from the cables and configs inside the lab file
+  - `floorplan.py` draws `floorplan.svg`, a made up sketch of the building with the rooms of the lab in it
   - `netcheck_ui.py` is a simple page in the browser with buttons for all of it. Start it with `python3 tools/netcheck_ui.py`
 - `screenshots/` - screenshots for this document (list is at the bottom)
 
 ## 1. Lab overview
 
-This is my own design for part of a high school network, using eight rooms at Redmond High
-School: E230, E110, E103, E203, C214, B126, B128 and C216. It is NOT the real RHS network. I don't know
+This is my own design for part of a high school network, using twelve rooms in three wings
+(E, C and B) on two floors, named after rooms at Redmond High School. A room number is wing,
+floor, room: E230 is wing E, floor 2. Three of them have a job: C114 is the library, C116 a
+computer lab and B226 a science lab. It is NOT the real RHS network. I don't know
 how the district set theirs up, so the topology, subnets, VLANs and rules are my own choices.
 
 What the network has to do:
 
-- 120 student PCs (15 per room), 8 teacher PCs, 6 office PCs, 2 IT PCs, 4 servers
+- 180 student PCs (15 per room), 12 teacher PCs, 6 office PCs, 2 IT PCs, 4 servers
 - students, teachers, office staff and IT are kept apart, with rules for who can reach what
 - every PC gets its address from one DHCP server
 - everyone reaches the internet through NAT
@@ -77,8 +85,8 @@ is drawn by `tools/diagram.py` from the lab file itself. The same thing as text:
                     |     \   /     |
                 [DIST-L3-1]=====[DIST-L3-2]      DISTRIBUTION: gateways, HSRP, ACLs, DHCP relay
                   |  |  |  |  |  |  |  |  |  |
-   SW-OFFICE   SW-E230 SW-E110 SW-E103 SW-E203 SW-C214 SW-B126 SW-B128 SW-C216   SW-MDF      ACCESS
-    6 PCs              16 PCs in each room (15 students + teacher)             4 servers, 2 IT PCs
+   SW-OFFICE     E wing (4)      C wing (4)      B wing (4)      SW-MDF          ACCESS
+    6 PCs      one 2960 per room, 16 PCs each (15 students + teacher)   4 servers, 2 IT PCs
 ```
 
 `=====` is an EtherChannel. Every access switch has one trunk to DIST-L3-1 and one to DIST-L3-2.
@@ -88,7 +96,7 @@ is drawn by `tools/diagram.py` from the lab file itself. The same thing as text:
 | RHS-EDGE1, RHS-EDGE2 | 2911 | edge | NAT, default route to the ISP, ACL for traffic from the internet |
 | CORE-L3-1, CORE-L3-2 | 3650 | core | route between edge and distribution, nothing else |
 | DIST-L3-1, DIST-L3-2 | 3650 | distribution | default gateway of every VLAN (HSRP), ACLs between VLANs, DHCP relay, STP root |
-| SW-E230, SW-E110, SW-E103, SW-E203, SW-C214, SW-B126, SW-B128, SW-C216 | 2960 | access | one per room. Fa0/1-15 students, Fa0/16 teacher, Gi0/1 and Gi0/2 uplinks |
+| SW-E103, SW-E110, SW-E203, SW-E230, SW-C114, SW-C116, SW-C214, SW-C216, SW-B126, SW-B128, SW-B226, SW-B228 | 2960 | access | one per room. Fa0/1-15 students, Fa0/16 teacher, Gi0/1 and Gi0/2 uplinks |
 | SW-OFFICE | 3650 as layer 2 | access | main office and counseling |
 | SW-MDF | 3650 as layer 2 | access | servers and the IT office |
 | ISP, INET-SRV | 2911, server | outside | pretend internet |
@@ -110,7 +118,7 @@ the same two boxes. Splitting it up:
 
 | VLAN | Name | Subnet | Gateway | Who | Root / HSRP active |
 |------|------|--------|---------|-----|--------------------|
-| 10 | STUDENTS | 10.10.8.0/22 | 10.10.8.1 | the 120 room PCs | DIST-L3-1 |
+| 10 | STUDENTS | 10.10.8.0/22 | 10.10.8.1 | the 180 room PCs | DIST-L3-1 |
 | 20 | TEACHERS | 10.10.20.0/24 | 10.10.20.1 | teacher PC in each room | DIST-L3-2 |
 | 30 | MANAGEMENT | 10.10.30.0/24 | 10.10.30.1 | principal, counselors, office | DIST-L3-2 |
 | 70 | SERVERS | 10.10.70.0/24 | 10.10.70.1 | servers | DIST-L3-1 |
@@ -151,8 +159,9 @@ DHCP scopes on SRV-DHCP (every other PC uses DHCP):
     TEACHERS     10.10.20.50 - 10.10.20.149   gateway 10.10.20.1   DNS 10.10.70.10
     MANAGEMENT   10.10.30.50 - 10.10.30.149   gateway 10.10.30.1   DNS 10.10.70.10
 
-Switch management (VLAN 99): room switches 10.10.99.11 to .16 in the order E230, E110, E103,
-E203, C214, B126. SW-OFFICE .21, SW-MDF .22.
+Switch management (VLAN 99): room switches 10.10.99.11 to .20 and .23, .24 in the order they
+were added (E230, E110, E103, E203, C214, B126, B128, C216, C114, C116, B226, B228), the full
+list is in `tools/inventory.csv`. SW-OFFICE .21, SW-MDF .22.
 
 Point to point links (all /30):
 
@@ -362,29 +371,29 @@ output for the lab as it is in this folder:
 
 ```
 Redundancy
-  PASS  Hosts that still reach the ISP after any single failure              140 of 140 hosts
-  PASS  Access switches cabled to both distribution switches                 10 of 10 switches
+  PASS  Hosts that still reach the ISP after any single failure              204 of 204 hosts
+  PASS  Access switches cabled to both distribution switches                 14 of 14 switches
   PASS  VLANs with the same HSRP gateway on both distribution switches       5 of 5 VLANs
   PASS  VLANs where the spanning tree root is also the HSRP active switch    5 of 5 VLANs
 
 Switching
-  PASS  Trunk cables with the same allowed and native VLANs on both ends     26 of 26 trunks
-  PASS  PCs and servers plugged into a port of the right VLAN                140 of 140 hosts
+  PASS  Trunk cables with the same allowed and native VLANs on both ends     34 of 34 trunks
+  PASS  PCs and servers plugged into a port of the right VLAN                204 of 204 hosts
   PASS  Gateway interfaces that relay DHCP to SRV-DHCP                       6 of 6 interfaces
-  PASS  Fullest subnet (lower is better)                                     12 <= 50 % used
+  PASS  Fullest subnet (lower is better)                                     18 <= 50 % used
 
 Security
-  PASS  PC ports with port security                                          136 of 136 ports
-  PASS  Host ports with PortFast and BPDU guard                              140 of 140 ports
-  PASS  Ports without a cable that are shut down                             176 of 176 ports
-  PASS  Devices that only allow SSH version 2 for remote login               16 of 16 devices
+  PASS  PC ports with port security                                          200 of 200 ports
+  PASS  Host ports with PortFast and BPDU guard                              204 of 204 ports
+  PASS  Ports without a cable that are shut down                             200 of 200 ports
+  PASS  Devices that only allow SSH version 2 for remote login               20 of 20 devices
 
 Monitoring
-  PASS  Devices that send logs to SRV-LOG, use NTP and answer SNMP           16 of 16 devices
-  PASS  Device configs in the lab that match the configs folder              17 of 17 devices
+  PASS  Devices that send logs to SRV-LOG, use NTP and answer SNMP           20 of 20 devices
+  PASS  Device configs in the lab that match the configs folder              21 of 21 devices
 
 14 of 14 tests passed, score 100%.
-Lab: 162 devices (16 routers and switches, 140 PCs and servers), 177 cables. 42 single failures tried.
+Lab: 230 devices (20 routers and switches, 204 PCs and servers), 249 cables. 50 single failures tried.
 ```
 
 `python3 labtest.py --record` adds the result to `changes/health.csv`, so there is a history of
@@ -406,9 +415,9 @@ to do myself in the lab.
   `ipconfig /renew` and can suddenly reach the file server, which students must not
 - Found by: `labtest.py` drops from 14 to 12 passing tests and names the port
 
-      FAIL PCs and servers plugged into a port of the right VLAN   139 of 140 hosts
+      FAIL PCs and servers plugged into a port of the right VLAN   203 of 204 hosts
            E230-PC03: on SW-E230 FastEthernet0/3 in VLAN 20, should be VLAN 10
-      FAIL Device configs in the lab that match the configs folder  16 of 17 devices
+      FAIL Device configs in the lab that match the configs folder  20 of 21 devices
            SW-E230: lab and configs/SW-E230.txt differ
 
   In the CLI the same thing shows in `show vlan brief` on SW-E230 (Fa0/3 listed under VLAN 20)
@@ -424,7 +433,7 @@ to do myself in the lab.
   This is the kind of problem redundancy covers up
 - Found by: `labtest.py` compares both ends of every trunk cable
 
-      FAIL Trunk cables with the same allowed and native VLANs on both ends   25 of 26 trunks
+      FAIL Trunk cables with the same allowed and native VLANs on both ends   33 of 34 trunks
            SW-E110 GigabitEthernet0/1 - DIST-L3-1 GigabitEthernet1/0/6: allowed 10,20,99 / 10,99, native 999 / 999
 
   In the CLI: `show interfaces trunk` on DIST-L3-1 and on SW-E110, compare the "VLANs allowed" lines

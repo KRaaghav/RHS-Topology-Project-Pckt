@@ -4,13 +4,14 @@ pktbuild.py - add a whole classroom to the Packet Tracer lab
 
   python3 pktbuild.py add-room B128              add room B128 to the lab
   python3 pktbuild.py add-room B128 --dry-run    only say what would happen
+  python3 pktbuild.py add-room C114 Library      a room with a name, shown on the canvas and the plans
 
 A new room is a copy of the last classroom: one 2960 switch, 15 student PCs, a teacher
 PC and all the cables, with two uplinks to the next free port on DIST-L3-1 and DIST-L3-2.
 The program does everything a new room needs:
 
   - copies the devices and cables inside the .pkt file (new names, new MAC addresses)
-  - gives the switch the next free management address in 10.10.99.11 - 10.10.99.20
+  - gives the switch the next free management address in 10.10.99.0/24
   - turns the port on both distribution switches into a trunk for the room
   - writes configs/SW-<room>.txt and updates the two DIST files
   - adds the devices to inventory.csv
@@ -33,7 +34,8 @@ import pktlayout
 from pktconfig import CONFIGS, HERE, LAB, Problem
 
 INVENTORY = os.path.join(HERE, "inventory.csv")
-MGMT_ADDRESSES = [f"10.10.99.{n}" for n in range(11, 21)]       # kept for classroom switches
+# kept for classroom switches (.21 and .22 are the office and the MDF)
+MGMT_ADDRESSES = [f"10.10.99.{n}" for n in list(range(11, 21)) + list(range(23, 41))]
 DISTS = ["DIST-L3-1", "DIST-L3-2"]
 
 
@@ -228,12 +230,14 @@ def write_config_file(old_room, new_room, old_port, new_port, old_address, new_a
         f.write(text)
 
 
-def add_to_inventory(room, address):
-    """The switch goes after the other room switches, the PCs after the other room PCs."""
+def add_to_inventory(room, address, label=""):
+    """The switch goes after the other room switches, the PCs after the other room PCs.
+    A label like Library is kept in the location of the switch: Room C114 (Library)."""
     with open(INVENTORY) as f:
         lines = f.read().splitlines()
     last_switch = max(i for i, l in enumerate(lines) if ",switch 2960," in l)
-    lines.insert(last_switch + 1, f"SW-{room},switch 2960,Room {room},NETWORK-IT,{address}")
+    place = f"Room {room} ({label})" if label else f"Room {room}"
+    lines.insert(last_switch + 1, f"SW-{room},switch 2960,{place},NETWORK-IT,{address}")
     last_pc = max(i for i, l in enumerate(lines) if ",STUDENTS,dhcp" in l)
     pcs = [f"{room}-TCHR,PC,Room {room},TEACHERS,dhcp"] + \
           [f"{room}-PC{n:02d},PC,Room {room},STUDENTS,dhcp" for n in range(1, 16)]
@@ -244,9 +248,12 @@ def add_to_inventory(room, address):
 
 # ---------------------------------------------------------------- adding a room
 
-def add_room(room, lab_path=LAB, write=True):
+def add_room(room, lab_path=LAB, write=True, label=""):
     """Returns the lines of a short report."""
     room = room.strip().upper()
+    label = label.strip()
+    if not re.fullmatch(r"[A-Za-z0-9 ]{0,24}", label):
+        raise Problem("The name of a room is letters, digits and spaces only (24 at most).")
     if not re.fullmatch(r"[A-Z]\d{3}", room):
         raise Problem("A room number is a letter and three digits, like B128.")
     rows = inventory_rows()
@@ -255,7 +262,7 @@ def add_room(room, lab_path=LAB, write=True):
     taken = {row["ip"] for row in rows}
     address = next((a for a in MGMT_ADDRESSES if a not in taken), None)
     if address is None:
-        raise Problem("All ten management addresses for classroom switches (10.10.99.11-20) are used.")
+        raise Problem("All management addresses kept for classroom switches are used.")
     old_room = pktlayout.classrooms()[-1]
 
     lab = pktconfig.Lab(lab_path)
@@ -285,7 +292,7 @@ def add_room(room, lab_path=LAB, write=True):
                 lines = room_trunk(f.read().splitlines(), old_room, room, old_port, new_port)
             with open(path, "w") as f:
                 f.write("\n".join(lines) + "\n")
-        add_to_inventory(room, address)
+        add_to_inventory(room, address, label)
         pktlayout.arrange(lab_path, backup=False)
     report.append(f"Written to {os.path.basename(lab_path)}." +
                   (f" The lab from before is in changes/backups/{backup}" if backup else ""))
@@ -306,11 +313,11 @@ def main(args):
         args = args[:at] + args[at + 2:]
     write = "--dry-run" not in args
     args = [a for a in args if a != "--dry-run"]
-    if len(args) != 2 or args[0] != "add-room":
+    if len(args) < 2 or args[0] != "add-room":
         print(__doc__)
         return 2
     try:
-        print("\n".join(add_room(args[1], lab_path, write)))
+        print("\n".join(add_room(args[1], lab_path, write, " ".join(args[2:]))))
     except Problem as err:
         print("Problem:", err)
         return 1

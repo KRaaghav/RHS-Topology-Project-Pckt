@@ -30,6 +30,7 @@ import webbrowser
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
 import diagram
+import floorplan
 import labtest
 import netcheck
 import netconfig
@@ -163,11 +164,12 @@ def action(path, body):
         result["history"] = labtest.history()[-40:]
         return result
     if path == "/topology":
-        return {"svg": diagram.svg()}
+        return {"svg": diagram.svg(), "plan": floorplan.svg()}
     if path == "/add-room":
-        report = pktbuild.add_room(body.get("room", ""))
-        with open(diagram.OUT, "w") as f:          # the picture in the README shows the new room too
-            f.write(diagram.svg())
+        report = pktbuild.add_room(body.get("room", ""), label=body.get("label", ""))
+        for module in (diagram, floorplan):        # the pictures in the README show the new room too
+            with open(module.OUT, "w") as f:
+                f.write(module.svg())
         return {"message": " ".join(report[:2])}
     if path == "/layout":
         report = pktlayout.arrange()
@@ -307,7 +309,8 @@ PAGE = r"""<!doctype html>
       <div class="tiles" id="tiles"></div>
     </div>
     <div class="card">
-      <div class="head" style="align-items:center"><div><h2>Topology</h2><p>Drawn from the cables inside the lab file. Click a router or switch to read its config.</p></div></div>
+      <div class="head" style="align-items:center"><div><h2 id="view-title">Topology</h2><p id="view-sub">Drawn from the cables inside the lab file. Click a router or switch to read its config.</p></div>
+        <div class="picks"><button class="pick on" id="view-topology" onclick="showView('topology')">Topology</button><button class="pick" id="view-plan" onclick="showView('plan')">Building</button></div></div>
       <div id="topology"><p class="empty" style="padding:18px">Drawing...</p></div>
     </div>
   </section>
@@ -450,7 +453,7 @@ PAGE = r"""<!doctype html>
   const TABS = [['overview', 'Overview'], ['lab', 'Lab'], ['configure', 'Configure'], ['monitor', 'Monitor'], ['checks', 'Checks'], ['history', 'History']];
   const LAYERS = [['edge', 'Edge routers'], ['core', 'Core switches'], ['dist', 'Distribution switches'], ['room', 'Room switches'],
                   ['access', 'Office and MDF'], ['outside', 'Outside the school']];
-  let DATA = null, LAB = null, HEALTH = null, SHEET = '', SHEET_NAME = '';
+  let DATA = null, LAB = null, HEALTH = null, VIEWS = null, VIEW = 'topology', SHEET = '', SHEET_NAME = '';
 
   function val(id) { return document.getElementById(id).value; }
   function el(tag, text, cls) { const e = document.createElement(tag); if (text) e.textContent = text; if (cls) e.className = cls; return e; }
@@ -597,12 +600,13 @@ PAGE = r"""<!doctype html>
   }
 
   async function addRoom() {
-    const room = prompt('Room number of the new classroom (a letter and three digits, like E231).' + NL + NL +
+    const room = prompt('Room number of the new classroom: wing letter, floor, two digits. E231 is wing E, floor 2.' + NL + NL +
                         'It gets a 2960 switch, 15 student PCs, a teacher PC and two uplinks, copied from the last room. ' +
                         'Close the lab in Packet Tracer first.');
     if (!room) return;
+    const label = prompt('A name for the room, like Library or Art room. Leave empty for a normal classroom.') || '';
     toast('Adding room ' + room.toUpperCase() + '...');
-    const reply = await ask('/add-room', {room: room});
+    const reply = await ask('/add-room', {room: room, label: label});
     toast(reply.error || reply.message);
     if (!reply.error) { DATA = await (await fetch('/data')).json(); loadLab(); loadOverview(); }
   }
@@ -619,7 +623,22 @@ PAGE = r"""<!doctype html>
     const reply = await ask('/topology');
     const box = clear('topology');
     if (reply.error) { box.appendChild(el('div', reply.error, 'msg bad')); return; }
-    const picture = new DOMParser().parseFromString(reply.svg, 'image/svg+xml').documentElement;
+    VIEWS = reply;
+    showView(VIEW);
+    if (say) toast('Overview read again.');
+  }
+
+  function showView(name) {
+    VIEW = name;
+    document.getElementById('view-topology').classList.toggle('on', name === 'topology');
+    document.getElementById('view-plan').classList.toggle('on', name === 'plan');
+    document.getElementById('view-title').textContent = name === 'plan' ? 'Building' : 'Topology';
+    document.getElementById('view-sub').textContent = name === 'plan'
+      ? 'A made up sketch of the school with the rooms of the lab, their switches and the cable runs to the server room.'
+      : 'Drawn from the cables inside the lab file. Click a router or switch to read its config.';
+    if (!VIEWS) return;
+    const box = clear('topology');
+    const picture = new DOMParser().parseFromString(name === 'plan' ? VIEWS.plan : VIEWS.svg, 'image/svg+xml').documentElement;
     box.appendChild(document.importNode(picture, true));
     for (const node of box.querySelectorAll('.node')) {
       node.addEventListener('click', () => {
@@ -627,7 +646,6 @@ PAGE = r"""<!doctype html>
         if (d) openSheet(d); else toast(node.dataset.name + ' is a server, it has no IOS config.');
       });
     }
-    if (say) toast('Overview read again.');
   }
 
   async function loadHealth(record, say) {

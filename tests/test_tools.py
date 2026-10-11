@@ -18,10 +18,12 @@ ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")
 sys.path.insert(0, os.path.join(ROOT, "tools"))
 
 import diagram                                      # noqa: E402
+import floorplan                                    # noqa: E402
 import labtest                                      # noqa: E402
 import pktbuild                                     # noqa: E402
 import pktconfig                                    # noqa: E402
 import pktfile                                      # noqa: E402
+import pktlayout                                    # noqa: E402
 
 LAB = os.path.join(ROOT, "RHS School Network.pkt")
 
@@ -228,3 +230,29 @@ def test_picture_shows_every_router_and_switch():
         assert f'data-name="{name}"' in picture
     with open(os.path.join(ROOT, "topology.svg")) as f:
         assert f.read() == picture                                 # the saved picture is up to date
+
+
+def test_rooms_are_grouped_by_wing_and_floor():
+    wings = pktlayout.wings()
+    assert list(wings)[:3] == ["E", "C", "B"]
+    assert wings["E"]["2"] == ["E203", "E230"]
+    for wing, floors in wings.items():
+        for floor, rooms in floors.items():
+            assert all(room[0] == wing and room[1] == floor for room in rooms)
+
+
+def test_nothing_on_the_canvas_overlaps():
+    boxes = pktlayout.boxes()
+    for i, a in enumerate(boxes):
+        for b in boxes[i + 1:]:
+            assert not (a[0] < b[2] and b[0] < a[2] and a[1] < b[3] and b[1] < a[3]), (a, b)
+    places = list(pktlayout.positions().values())
+    assert len(set(places)) == len(places)                         # no two devices on the same spot
+
+
+def test_building_sketch_has_every_room_of_the_lab():
+    sketch = floorplan.svg()
+    for room in pktlayout.classrooms():
+        assert f">SW-{room}<" in sketch
+    with open(os.path.join(ROOT, "floorplan.svg")) as f:
+        assert f.read() == sketch                                  # the saved sketch is up to date

@@ -46,7 +46,6 @@ def svg(lab_path=LAB):
     """The whole picture as SVG text."""
     p = labtest.Picture(lab_path)
     plan = labtest.read_csv("plan.csv")
-    vlan_name = {row["vlan"]: row["name"] for row in plan if row["vlan"]}
     middle = WIDTH / 2 + 60
     where = {}
     parts = []
@@ -99,7 +98,8 @@ def svg(lab_path=LAB):
 
     for wing, xs in wing_span.items():
         y = ACCESS_Y + 132
-        boxes.append(f'<line x1="{xs[0] - step / 2 + 8:.0f}" y1="{y}" x2="{xs[-1] + step / 2 - 8:.0f}" y2="{y}" stroke="#b8862b" stroke-width="3"/>')
+        boxes.append(f'<line x1="{xs[0] - step / 2 + 8:.0f}" y1="{y}" x2="{xs[-1] + step / 2 - 8:.0f}" y2="{y}" '
+                     f'stroke="#b8862b" stroke-width="3"/>')
         boxes.append(text((xs[0] + xs[-1]) / 2, y + 18, f"{wing} wing", 12, "700"))
 
     # the cables between routers and switches. Two cables between the same pair are an EtherChannel

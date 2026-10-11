@@ -68,12 +68,12 @@ class Picture:
         if header not in lines:
             return []
         start = lines.index(header)
-        return [l.strip() for l in lines[start + 1:pktconfig.section_end(lines, start)]]
+        return [line.strip() for line in lines[start + 1:pktconfig.section_end(lines, start)]]
 
     def ports(self, device):
         """{port name: its config lines} for the real ports of a device."""
-        return {l[10:]: self.section(device, l) for l in self.configs[device]
-                if re.match(r"interface (Fast|Gigabit)Ethernet", l)}
+        return {line[10:]: self.section(device, line) for line in self.configs[device]
+                if re.match(r"interface (Fast|Gigabit)Ethernet", line)}
 
     def cabled(self, device):
         """{port: (other device, other port)}"""
@@ -111,7 +111,7 @@ def read_csv(name):
 
 def value_after(lines, start):
     """The rest of the first line that starts with this text, or None."""
-    return next((l[len(start):].strip() for l in lines if l.startswith(start)), None)
+    return next((line[len(start):].strip() for line in lines if line.startswith(start)), None)
 
 
 # ---------------------------------------------------------------- the tests
@@ -216,8 +216,8 @@ def test_ssh_only(p):
     wrong = []
     for name in p.network:
         lines = p.configs[name]
-        vty = [l.strip() for i, l in enumerate(lines) if l.startswith("line vty")
-               for l in lines[i + 1:pktconfig.section_end(lines, i)]]
+        vty = [line.strip() for i, line in enumerate(lines) if line.startswith("line vty")
+               for line in lines[i + 1:pktconfig.section_end(lines, i)]]
         if "ip ssh version 2" not in lines or "transport input ssh" not in vty or "transport input telnet" in vty:
             wrong.append(f"{name}: remote login is not SSH version 2 only")
     return len(p.network) - len(wrong), len(p.network), wrong
@@ -323,10 +323,13 @@ def test_address_room(p):
 
 # (id, group, what is measured, unit, test, True when a lower number is better)
 TESTS = [
-    ("single-failure", "Redundancy", "Hosts that still reach the ISP after any single failure", "hosts", test_single_failure, False),
+    ("single-failure", "Redundancy", "Hosts that still reach the ISP after any single failure", "hosts",
+     test_single_failure, False),
     ("two-uplinks", "Redundancy", "Access switches cabled to both distribution switches", "switches", test_two_uplinks, False),
-    ("gateways", "Redundancy", "VLANs with the same HSRP gateway on both distribution switches", "VLANs", test_gateways, False),
-    ("root-gateway", "Redundancy", "VLANs where the spanning tree root is also the HSRP active switch", "VLANs", test_root_matches_gateway, False),
+    ("gateways", "Redundancy", "VLANs with the same HSRP gateway on both distribution switches", "VLANs",
+     test_gateways, False),
+    ("root-gateway", "Redundancy", "VLANs where the spanning tree root is also the HSRP active switch", "VLANs",
+     test_root_matches_gateway, False),
     ("trunks", "Switching", "Trunk cables with the same allowed and native VLANs on both ends", "trunks", test_trunks, False),
     ("host-vlans", "Switching", "PCs and servers plugged into a port of the right VLAN", "hosts", test_host_vlans, False),
     ("dhcp-relay", "Switching", "Gateway interfaces that relay DHCP to SRV-DHCP", "interfaces", test_dhcp_relay, False),
@@ -335,7 +338,8 @@ TESTS = [
     ("edge-ports", "Security", "Host ports with PortFast and BPDU guard", "ports", test_edge_ports, False),
     ("unused-ports", "Security", "Ports without a cable that are shut down", "ports", test_unused_ports, False),
     ("ssh-only", "Security", "Devices that only allow SSH version 2 for remote login", "devices", test_ssh_only, False),
-    ("monitoring", "Monitoring", "Devices that send logs to SRV-LOG, use NTP and answer SNMP", "devices", test_monitoring, False),
+    ("monitoring", "Monitoring", "Devices that send logs to SRV-LOG, use NTP and answer SNMP", "devices",
+     test_monitoring, False),
     ("drift", "Monitoring", "Device configs in the lab that match the configs folder", "devices", test_drift, False),
 ]
 

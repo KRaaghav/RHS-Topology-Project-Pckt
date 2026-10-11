@@ -114,15 +114,15 @@ class Twofish:
         return result
 
     @staticmethod
-    def _h_column(col, x, l):
+    def _h_column(col, x, keys):
         """One input byte through the key dependent S-box and one MDS column."""
         first, second, third = ((Q0, Q0, Q1), (Q1, Q0, Q0), (Q0, Q1, Q1), (Q1, Q1, Q0))[col]
-        y = third[second[first[x] ^ l[1][col]] ^ l[0][col]]
+        y = third[second[first[x] ^ keys[1][col]] ^ keys[0][col]]
         return (_gf_mul(MDS[0][col], y, 0x169) | _gf_mul(MDS[1][col], y, 0x169) << 8 |
                 _gf_mul(MDS[2][col], y, 0x169) << 16 | _gf_mul(MDS[3][col], y, 0x169) << 24)
 
-    def _h(self, x, l):
-        return self._xor_all(self._h_column(col, x[col], l) for col in range(4))
+    def _h(self, x, keys):
+        return self._xor_all(self._h_column(col, x[col], keys) for col in range(4))
 
     def encrypt(self, block):
         t0, t1, t2, t3 = self.tables

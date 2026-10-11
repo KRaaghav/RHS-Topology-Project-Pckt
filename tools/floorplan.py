@@ -43,7 +43,8 @@ def text(x, y, words, size=11, weight="400", anchor="middle", colour=INK):
 
 
 def box(x, y, width, height, colour, stroke=WALL):
-    return f'<rect x="{x:.0f}" y="{y:.0f}" width="{width:.0f}" height="{height:.0f}" fill="{colour}" stroke="{stroke}" stroke-width="1.2"/>'
+    return (f'<rect x="{x:.0f}" y="{y:.0f}" width="{width:.0f}" height="{height:.0f}" '
+            f'fill="{colour}" stroke="{stroke}" stroke-width="1.2"/>')
 
 
 def floor(number, left, top, wings, labels):

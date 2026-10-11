@@ -97,9 +97,9 @@ def trunk_ports(name, contains=""):
     for port, lines in read_interfaces(name).items():
         if "switchport mode trunk" not in lines:
             continue
-        if any(l.startswith("channel-group") for l in lines):
+        if any(line.startswith("channel-group") for line in lines):
             continue
-        description = " ".join(l for l in lines if l.startswith("description"))
+        description = " ".join(line for line in lines if line.startswith("description"))
         if contains and contains.lower() not in description.lower():
             continue
         found.append(port)
@@ -250,7 +250,7 @@ def change_save_only(device, v):
 
 
 def change_custom(device, v):
-    lines = [l.rstrip() for l in v["commands"].splitlines() if l.strip()]
+    lines = [line.rstrip() for line in v["commands"].splitlines() if line.strip()]
     if not lines:
         raise Problem("Type at least one command.")
     return lines

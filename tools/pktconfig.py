@@ -109,7 +109,7 @@ class Lab:
 
     @staticmethod
     def _lines(block):
-        return [html.unescape(l) for l in re.findall(r"<LINE>(.*?)</LINE>", block, re.S)]
+        return [html.unescape(line) for line in re.findall(r"<LINE>(.*?)</LINE>", block, re.S)]
 
     def config(self, name):
         """The running config of a device as a list of lines."""
@@ -118,8 +118,8 @@ class Lab:
     def set_config(self, name, lines):
         """Replace the running config, and save it like "write memory" would."""
         device = self._device(name)
-        packed = "".join("<LINE>" + l.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;") + "</LINE>"
-                         for l in lines)
+        packed = "".join("<LINE>" + line.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;") + "</LINE>"
+                         for line in lines)
         startup = re.search(r"<STARTUPCONFIG>(.*?)</STARTUPCONFIG>", device, re.S)
         old_startup = self._lines(startup.group(1)) if startup else None
 
@@ -279,8 +279,8 @@ NEEDS_DEVICE = ("show ", "do ", "ping ", "traceroute ", "reload", "copy ", "eras
 
 def read_script(text):
     """Turn typed commands into steps: (section header or None, command or None)."""
-    raw = [l.rstrip() for l in text.splitlines() if l.strip() and not l.lstrip().startswith("!")]
-    nothing_indented = not any(l.startswith(" ") for l in raw)
+    raw = [line.rstrip() for line in text.splitlines() if line.strip() and not line.lstrip().startswith("!")]
+    nothing_indented = not any(line.startswith(" ") for line in raw)
     steps = []
     header = None
     for line in raw:
@@ -631,7 +631,7 @@ def merge(old_lines, script):
 # ---------------------------------------------------------------- applying to the lab
 
 def without_comments(lines):
-    return [l.rstrip() for l in lines if l.strip() and not l.startswith("!")]
+    return [line.rstrip() for line in lines if line.strip() and not line.startswith("!")]
 
 
 def packet_tracer_is_open():
@@ -693,7 +693,7 @@ def overview(lab_path=LAB):
         if os.path.exists(path):
             with open(path) as f:
                 same = without_comments(f.read().splitlines()) == without_comments(config)
-        hostname = next((l.split(None, 1)[1] for l in config if l.startswith("hostname ")), name)
+        hostname = next((line.split(None, 1)[1] for line in config if line.startswith("hostname ")), name)
         rows.append({"name": name, "hostname": hostname, "lines": len(config), "same_as_file": same,
                      "vlans": {n: v for n, v in sorted(lab.vlans(name).items()) if n not in (1, 1002, 1003, 1004, 1005)}})
     return rows
@@ -727,7 +727,7 @@ def apply(scripts, lab_path=LAB, write=True):
             raise Problem(f"{name}: {err}")
         notes += [f"{name}: {note}" for note in device_notes]
 
-        report = [l for l in difflib.unified_diff(old, new, lineterm="", n=1) if not l.startswith(("---", "+++"))]
+        report = [line for line in difflib.unified_diff(old, new, lineterm="", n=1) if not line.startswith(("---", "+++"))]
         existing = lab.vlans(name)
         for action, number, vlan_name in vlan_changes:
             if action == "add" and vlan_name is None:
@@ -788,7 +788,7 @@ def check(lab_path):
         with open(path) as f:
             on_disk = without_comments(f.read().splitlines())
         in_lab = without_comments(lab.config(name))
-        delta = [l for l in difflib.unified_diff(on_disk, in_lab, "configs/" + name + ".txt", "lab", lineterm="", n=0)]
+        delta = [line for line in difflib.unified_diff(on_disk, in_lab, "configs/" + name + ".txt", "lab", lineterm="", n=0)]
         print(f"{name:<12}{'same' if not delta else 'DIFFERENT'}")
         for line in delta[2:]:
             print("   ", line)

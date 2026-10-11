@@ -378,19 +378,14 @@ def replace_once(xml, pattern, new_text, what):
     return result
 
 
-def read_lab(lab_path):
-    """The XML inside the lab file."""
+def arrange(lab_path=LAB, write=True, backup=True):
+    """Returns the lines of a short report. backup=False when the caller already kept a copy."""
     try:
-        return pktfile.read_pkt(lab_path).decode("utf-8")
+        xml = pktfile.read_pkt(lab_path).decode("utf-8")
     except FileNotFoundError:
         raise Problem(f"Lab file not found: {lab_path}")
     except (ValueError, OSError) as err:
         raise Problem(f"Cannot read {os.path.basename(lab_path)}: {err}")
-
-
-def arrange(lab_path=LAB, write=True, backup=True):
-    """Returns the lines of a short report. backup=False when the caller already kept a copy."""
-    xml = read_lab(lab_path)
 
     where = positions()
     report = []

@@ -8,9 +8,15 @@ worked. The examples are the real ones from this network.
 
 1. Open Packet Tracer, File > Open, pick `RHS School Network.pkt`.
 2. Wait about a minute. Link lights start orange and turn green when spanning tree is done.
-3. The text on the canvas says what the lab does and what each layer is. Each layer and each
-   room has its own coloured box. Zoom with Ctrl/Cmd + scroll. The same text is under the **i**
-   button (top left of the workspace).
+3. The canvas is a floor plan of the school: the server room (MDF) with the routers and layer 3
+   switches in the middle, a wing of classrooms on three sides, the office, the cafeteria and
+   the gym at the top next to the street. Dark lines are walls, the orange boxes in the halls
+   are wiring closets with one switch per room. It is big, zoom with Ctrl/Cmd + scroll. The
+   text notes in the corners say what the lab does and what each layer is. The same text is
+   under the **i** button (top left of the workspace).
+   The smartboards, cameras and the other building things are PCs with their own
+   picture (Packet Tracer has no such devices). Click one and use Desktop > IP Configuration
+   or Command Prompt like on any PC.
 4. Bottom right: **Realtime** is normal. **Simulation** lets you watch one packet hop by hop
    (very good for seeing where an ACL drops something).
 
@@ -335,6 +341,10 @@ A page opens in the browser with six tabs:
 
 - **Overview** - the health score, how many devices and cables the lab has, and the topology
   drawn from the lab file. Click a router or switch in the picture to read its config.
+  **Break something** switches the device you click off and says how many PCs lose the
+  internet (it is the same search as the single failure test, nothing in the lab is changed).
+  **Building** shows the made up school in 3D, both floors on top of each other. Click a gold
+  room to see its switch, PCs and uplinks.
   "Add a room" runs `pktbuild.py`: type a room number and the lab gets a new classroom
 
 - **Lab** - every router and switch that is inside the Packet Tracer file, by layer, with its
@@ -428,8 +438,17 @@ into a file.
 
     python3 pktlayout.py
 
-arranges the canvas again: devices on a grid, a coloured box per layer and room, and the text
-notes. The text of the notes is at the top of `pktlayout.py`, change it there and run it again.
+draws the floor plan on the canvas again: every device in its room, the walls, halls and
+desks, the pictures of the building things, and the text notes. The text of the notes is in
+NOTES in `pktlayout.py`, the sizes of the rooms and halls are at the top. Change them there and
+run it again. `python3 floorplan.py` writes the same plan as `floorplan.svg` for the README.
+
+    python3 pktbuild.py add-thing CAM-GYM2 camera SW-A100 Gym
+
+plugs one more building thing into the next free port of a switch, in VLAN 40. The kinds are
+smartboard, printer, camera, door, register, vending and scoreboard.
+`python3 pktbuild.py remove-thing CAM-GYM2` takes one out again. To change how one
+looks, change its list of shapes in `pkticons.py` and run `pktlayout.py`.
 
 To see it catch mistakes, open `inventory.csv`, change an IP to one that is already used or to
 something like 10.10.70.300, and run the inventory check again.
@@ -460,9 +479,18 @@ something like 10.10.70.300, and run the inventory check again.
   returns a measured number, a target and the list of things that are wrong. The single failure
   test removes one device or cable at a time and walks the cables from the ISP to see which
   hosts can still be reached
-- `floorplan.py` reads the wing and the floor from each room number (E230 = wing E, floor 2) and
-  draws the rooms of the lab into a made up building
+- `pktlayout.py` works out the floor plan from the room numbers (E230 = wing E, floor 2). Floors
+  never overlap, and the walls are whatever is left of a building after its floors are taken
+  out, so a door is just a small floor in a wall. `floorplan.py` draws the same plan as SVG
+- `pkticons.py` draws each picture on a 64 x 64 grid from boxes, ovals and lines and packs it
+  as a PNG file by hand (zlib is in the Python standard library)
+- a building thing is added by copying a teacher PC and its cable inside the XML, like a room
 - `diagram.py` writes the topology picture as SVG text, with positions worked out from the
   number of access switches
 - `netcheck_ui.py` is a very small web server that only this computer can reach. A button on
   the page sends a request, the server calls the matching function and sends the text back
+- the page itself is the `ui` folder: `app.js` (the frame), `pages.js` (the six pages),
+  `views.js` (topology and building), `lib.js` (small shared parts) and `style.css`. It is
+  written with React. There is no build step: `htm` turns the html strings in those files into React
+  elements in the browser. React and htm are saved in `ui/vendor` (both MIT licence), so the
+  page works without internet. The sun/moon button at the bottom left switches light and dark

@@ -227,13 +227,13 @@ def room_switch_template(room, mgmt_ip, students=15):
     add("ip ssh version 2")
     add("lldp run")
     add("!")
-    for number, name in ((10, "STUDENTS"), (20, "TEACHERS"), (99, "NETWORK-IT"),
+    for number, name in ((10, "STUDENTS"), (20, "TEACHERS"), (40, "BUILDING"), (99, "NETWORK-IT"),
                          (998, "PARKING"), (999, "NATIVE")):
         add(f"vlan {number}")
         add(f" name {name}")
     add("!")
     add("spanning-tree mode rapid-pvst")
-    add("ip dhcp snooping vlan 10,20")
+    add("ip dhcp snooping vlan 10,20,40")
     add("no ip dhcp snooping information option")
     add("ip dhcp snooping")
     add("!")
@@ -255,13 +255,11 @@ def room_switch_template(room, mgmt_ip, students=15):
     for port in range(1, students + 1):
         access_port(port, f"Room {room} - student PC {port:02d}", 10)
     access_port(16, f"Room {room} - teacher PC", 20)
+    access_port(17, f"Room {room} - smartboard", 40)
 
     # everything that is not used gets parked and shut
-    first_unused = students + 1 if students < 15 else 17
-    unused = [p for p in range(first_unused, 25) if p != 16]
-    add(f"interface range FastEthernet0/{unused[0]} - {unused[-1]}"
-        if 16 not in range(unused[0], unused[-1]) else
-        f"interface range FastEthernet0/{unused[0]} - 15 , FastEthernet0/17 - 24")
+    add("interface range FastEthernet0/18 - 24" if students == 15 else
+        f"interface range FastEthernet0/{students + 1} - 15 , FastEthernet0/18 - 24")
     add(" switchport access vlan 998")
     add(" switchport mode access")
     add(" shutdown")
@@ -271,7 +269,7 @@ def room_switch_template(room, mgmt_ip, students=15):
         add(f"interface GigabitEthernet0/{port}")
         add(f" description Trunk to {dist}")
         add(" switchport trunk native vlan 999")
-        add(" switchport trunk allowed vlan 10,20,99")
+        add(" switchport trunk allowed vlan 10,20,40,99")
         add(" switchport mode trunk")
         add(" switchport nonegotiate")
         add(" ip dhcp snooping trust")

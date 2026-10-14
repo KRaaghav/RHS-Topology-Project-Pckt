@@ -1,5 +1,5 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1620 855" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif">
-<rect width="1620" height="855" fill="#ffffff"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1620 874" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif">
+<rect width="1620" height="874" fill="#ffffff"/>
 <text x="20" y="24" font-size="15" font-weight="700" text-anchor="start" fill="#18212b">RHS campus network</text>
 <rect x="150" y="26" width="1450" height="68" rx="10" fill="#e8e8e8" opacity="0.45"/>
 <text x="20" y="56" font-size="12" font-weight="700" text-anchor="start" fill="#18212b">Internet</text>
@@ -14,94 +14,136 @@
 <text x="20" y="372" font-size="10.5" font-weight="400" text-anchor="start" fill="#5f6c7a">gateways, HSRP, ACLs</text>
 <text x="20" y="496" font-size="12" font-weight="700" text-anchor="start" fill="#18212b">Access</text>
 <text x="20" y="512" font-size="10.5" font-weight="400" text-anchor="start" fill="#5f6c7a">one switch per room</text>
-<text x="201.78571428571428" y="536" font-size="10.5" font-weight="600" text-anchor="middle" fill="#18212b">Main office</text>
-<rect x="155.0" y="470" width="93.57142857142857" height="99" rx="9" fill="#d0f8d0" opacity="0.6"/>
+<text x="195.3125" y="536" font-size="10.5" font-weight="600" text-anchor="middle" fill="#18212b">Main office</text>
+<rect x="155.0" y="470" width="80.625" height="116" rx="9" fill="#d0f8d0" opacity="0.6"/>
 <circle cx="168.0" cy="554" r="4.5" fill="#6fcf97"/>
 <text x="177.0" y="558" font-size="9.5" font-weight="400" text-anchor="start" fill="#18212b">6 PCs VLAN 30</text>
-<text x="305.3571428571429" y="536" font-size="10.5" font-weight="600" text-anchor="middle" fill="#18212b">floor 1</text>
-<rect x="258.5714285714286" y="470" width="93.57142857142857" height="116" rx="9" fill="#ffffb0" opacity="0.6"/>
-<circle cx="271.5714285714286" cy="554" r="4.5" fill="#f2c94c"/>
-<text x="280.5714285714286" y="558" font-size="9.5" font-weight="400" text-anchor="start" fill="#18212b">15 PCs VLAN 10</text>
-<circle cx="271.5714285714286" cy="571" r="4.5" fill="#f2994a"/>
-<text x="280.5714285714286" y="575" font-size="9.5" font-weight="400" text-anchor="start" fill="#18212b">1 PC VLAN 20</text>
-<text x="408.92857142857144" y="536" font-size="10.5" font-weight="600" text-anchor="middle" fill="#18212b">floor 1</text>
-<rect x="362.14285714285717" y="470" width="93.57142857142857" height="116" rx="9" fill="#ffffb0" opacity="0.6"/>
-<circle cx="375.14285714285717" cy="554" r="4.5" fill="#f2c94c"/>
-<text x="384.14285714285717" y="558" font-size="9.5" font-weight="400" text-anchor="start" fill="#18212b">15 PCs VLAN 10</text>
-<circle cx="375.14285714285717" cy="571" r="4.5" fill="#f2994a"/>
-<text x="384.14285714285717" y="575" font-size="9.5" font-weight="400" text-anchor="start" fill="#18212b">1 PC VLAN 20</text>
-<text x="512.5" y="536" font-size="10.5" font-weight="600" text-anchor="middle" fill="#18212b">floor 2</text>
-<rect x="465.7142857142857" y="470" width="93.57142857142857" height="116" rx="9" fill="#ffffb0" opacity="0.6"/>
-<circle cx="478.7142857142857" cy="554" r="4.5" fill="#f2c94c"/>
-<text x="487.7142857142857" y="558" font-size="9.5" font-weight="400" text-anchor="start" fill="#18212b">15 PCs VLAN 10</text>
-<circle cx="478.7142857142857" cy="571" r="4.5" fill="#f2994a"/>
-<text x="487.7142857142857" y="575" font-size="9.5" font-weight="400" text-anchor="start" fill="#18212b">1 PC VLAN 20</text>
-<text x="616.0714285714286" y="536" font-size="10.5" font-weight="600" text-anchor="middle" fill="#18212b">floor 2</text>
-<rect x="569.2857142857142" y="470" width="93.57142857142857" height="116" rx="9" fill="#ffffb0" opacity="0.6"/>
-<circle cx="582.2857142857142" cy="554" r="4.5" fill="#f2c94c"/>
-<text x="591.2857142857142" y="558" font-size="9.5" font-weight="400" text-anchor="start" fill="#18212b">15 PCs VLAN 10</text>
-<circle cx="582.2857142857142" cy="571" r="4.5" fill="#f2994a"/>
-<text x="591.2857142857142" y="575" font-size="9.5" font-weight="400" text-anchor="start" fill="#18212b">1 PC VLAN 20</text>
-<text x="719.6428571428571" y="536" font-size="10.5" font-weight="600" text-anchor="middle" fill="#18212b">Library</text>
-<rect x="672.8571428571428" y="470" width="93.57142857142857" height="116" rx="9" fill="#ffffb0" opacity="0.6"/>
-<circle cx="685.8571428571428" cy="554" r="4.5" fill="#f2c94c"/>
-<text x="694.8571428571428" y="558" font-size="9.5" font-weight="400" text-anchor="start" fill="#18212b">15 PCs VLAN 10</text>
-<circle cx="685.8571428571428" cy="571" r="4.5" fill="#f2994a"/>
-<text x="694.8571428571428" y="575" font-size="9.5" font-weight="400" text-anchor="start" fill="#18212b">1 PC VLAN 20</text>
-<text x="823.2142857142857" y="536" font-size="10.5" font-weight="600" text-anchor="middle" fill="#18212b">Computer lab</text>
-<rect x="776.4285714285713" y="470" width="93.57142857142857" height="116" rx="9" fill="#ffffb0" opacity="0.6"/>
-<circle cx="789.4285714285713" cy="554" r="4.5" fill="#f2c94c"/>
-<text x="798.4285714285713" y="558" font-size="9.5" font-weight="400" text-anchor="start" fill="#18212b">15 PCs VLAN 10</text>
-<circle cx="789.4285714285713" cy="571" r="4.5" fill="#f2994a"/>
-<text x="798.4285714285713" y="575" font-size="9.5" font-weight="400" text-anchor="start" fill="#18212b">1 PC VLAN 20</text>
-<text x="926.7857142857142" y="536" font-size="10.5" font-weight="600" text-anchor="middle" fill="#18212b">floor 2</text>
-<rect x="879.9999999999999" y="470" width="93.57142857142857" height="116" rx="9" fill="#ffffb0" opacity="0.6"/>
-<circle cx="892.9999999999999" cy="554" r="4.5" fill="#f2c94c"/>
-<text x="901.9999999999999" y="558" font-size="9.5" font-weight="400" text-anchor="start" fill="#18212b">15 PCs VLAN 10</text>
-<circle cx="892.9999999999999" cy="571" r="4.5" fill="#f2994a"/>
-<text x="901.9999999999999" y="575" font-size="9.5" font-weight="400" text-anchor="start" fill="#18212b">1 PC VLAN 20</text>
-<text x="1030.357142857143" y="536" font-size="10.5" font-weight="600" text-anchor="middle" fill="#18212b">floor 2</text>
-<rect x="983.5714285714286" y="470" width="93.57142857142857" height="116" rx="9" fill="#ffffb0" opacity="0.6"/>
-<circle cx="996.5714285714286" cy="554" r="4.5" fill="#f2c94c"/>
-<text x="1005.5714285714286" y="558" font-size="9.5" font-weight="400" text-anchor="start" fill="#18212b">15 PCs VLAN 10</text>
-<circle cx="996.5714285714286" cy="571" r="4.5" fill="#f2994a"/>
-<text x="1005.5714285714286" y="575" font-size="9.5" font-weight="400" text-anchor="start" fill="#18212b">1 PC VLAN 20</text>
-<text x="1133.9285714285716" y="536" font-size="10.5" font-weight="600" text-anchor="middle" fill="#18212b">floor 1</text>
-<rect x="1087.1428571428573" y="470" width="93.57142857142857" height="116" rx="9" fill="#ffffb0" opacity="0.6"/>
-<circle cx="1100.1428571428573" cy="554" r="4.5" fill="#f2c94c"/>
-<text x="1109.1428571428573" y="558" font-size="9.5" font-weight="400" text-anchor="start" fill="#18212b">15 PCs VLAN 10</text>
-<circle cx="1100.1428571428573" cy="571" r="4.5" fill="#f2994a"/>
-<text x="1109.1428571428573" y="575" font-size="9.5" font-weight="400" text-anchor="start" fill="#18212b">1 PC VLAN 20</text>
-<text x="1237.5" y="536" font-size="10.5" font-weight="600" text-anchor="middle" fill="#18212b">floor 1</text>
-<rect x="1190.7142857142858" y="470" width="93.57142857142857" height="116" rx="9" fill="#ffffb0" opacity="0.6"/>
-<circle cx="1203.7142857142858" cy="554" r="4.5" fill="#f2c94c"/>
-<text x="1212.7142857142858" y="558" font-size="9.5" font-weight="400" text-anchor="start" fill="#18212b">15 PCs VLAN 10</text>
-<circle cx="1203.7142857142858" cy="571" r="4.5" fill="#f2994a"/>
-<text x="1212.7142857142858" y="575" font-size="9.5" font-weight="400" text-anchor="start" fill="#18212b">1 PC VLAN 20</text>
-<text x="1341.0714285714284" y="536" font-size="10.5" font-weight="600" text-anchor="middle" fill="#18212b">Science lab</text>
-<rect x="1294.2857142857142" y="470" width="93.57142857142857" height="116" rx="9" fill="#ffffb0" opacity="0.6"/>
-<circle cx="1307.2857142857142" cy="554" r="4.5" fill="#f2c94c"/>
-<text x="1316.2857142857142" y="558" font-size="9.5" font-weight="400" text-anchor="start" fill="#18212b">15 PCs VLAN 10</text>
-<circle cx="1307.2857142857142" cy="571" r="4.5" fill="#f2994a"/>
-<text x="1316.2857142857142" y="575" font-size="9.5" font-weight="400" text-anchor="start" fill="#18212b">1 PC VLAN 20</text>
-<text x="1444.642857142857" y="536" font-size="10.5" font-weight="600" text-anchor="middle" fill="#18212b">floor 2</text>
-<rect x="1397.857142857143" y="470" width="93.57142857142857" height="116" rx="9" fill="#ffffb0" opacity="0.6"/>
-<circle cx="1410.857142857143" cy="554" r="4.5" fill="#f2c94c"/>
-<text x="1419.857142857143" y="558" font-size="9.5" font-weight="400" text-anchor="start" fill="#18212b">15 PCs VLAN 10</text>
-<circle cx="1410.857142857143" cy="571" r="4.5" fill="#f2994a"/>
-<text x="1419.857142857143" y="575" font-size="9.5" font-weight="400" text-anchor="start" fill="#18212b">1 PC VLAN 20</text>
-<text x="1548.2142857142858" y="536" font-size="10.5" font-weight="600" text-anchor="middle" fill="#18212b">Server room, IT</text>
-<rect x="1501.4285714285716" y="470" width="93.57142857142857" height="116" rx="9" fill="#b8f8f8" opacity="0.6"/>
-<circle cx="1514.4285714285716" cy="554" r="4.5" fill="#56ccf2"/>
-<text x="1523.4285714285716" y="558" font-size="9.5" font-weight="400" text-anchor="start" fill="#18212b">4 servers VLAN 70</text>
-<circle cx="1514.4285714285716" cy="571" r="4.5" fill="#bb6bd9"/>
-<text x="1523.4285714285716" y="575" font-size="9.5" font-weight="400" text-anchor="start" fill="#18212b">2 PCs VLAN 99</text>
-<line x1="262" y1="632" x2="660" y2="632" stroke="#b8862b" stroke-width="3"/>
-<text x="460.7142857142857" y="650" font-size="12" font-weight="700" text-anchor="middle" fill="#18212b">E wing</text>
-<line x1="676" y1="632" x2="1074" y2="632" stroke="#b8862b" stroke-width="3"/>
-<text x="875.0" y="650" font-size="12" font-weight="700" text-anchor="middle" fill="#18212b">C wing</text>
-<line x1="1090" y1="632" x2="1488" y2="632" stroke="#b8862b" stroke-width="3"/>
-<text x="1289.2857142857142" y="650" font-size="12" font-weight="700" text-anchor="middle" fill="#18212b">B wing</text>
+<circle cx="168.0" cy="571" r="4.5" fill="#eb5757"/>
+<text x="177.0" y="575" font-size="9.5" font-weight="400" text-anchor="start" fill="#18212b">3 things VLAN 40</text>
+<text x="285.9375" y="536" font-size="10.5" font-weight="600" text-anchor="middle" fill="#18212b">floor 1</text>
+<rect x="245.625" y="470" width="80.625" height="133" rx="9" fill="#ffffb0" opacity="0.6"/>
+<circle cx="258.625" cy="554" r="4.5" fill="#f2c94c"/>
+<text x="267.625" y="558" font-size="9.5" font-weight="400" text-anchor="start" fill="#18212b">15 PCs VLAN 10</text>
+<circle cx="258.625" cy="571" r="4.5" fill="#f2994a"/>
+<text x="267.625" y="575" font-size="9.5" font-weight="400" text-anchor="start" fill="#18212b">1 PC VLAN 20</text>
+<circle cx="258.625" cy="588" r="4.5" fill="#eb5757"/>
+<text x="267.625" y="592" font-size="9.5" font-weight="400" text-anchor="start" fill="#18212b">2 things VLAN 40</text>
+<text x="376.5625" y="536" font-size="10.5" font-weight="600" text-anchor="middle" fill="#18212b">floor 1</text>
+<rect x="336.25" y="470" width="80.625" height="133" rx="9" fill="#ffffb0" opacity="0.6"/>
+<circle cx="349.25" cy="554" r="4.5" fill="#f2c94c"/>
+<text x="358.25" y="558" font-size="9.5" font-weight="400" text-anchor="start" fill="#18212b">15 PCs VLAN 10</text>
+<circle cx="349.25" cy="571" r="4.5" fill="#f2994a"/>
+<text x="358.25" y="575" font-size="9.5" font-weight="400" text-anchor="start" fill="#18212b">1 PC VLAN 20</text>
+<circle cx="349.25" cy="588" r="4.5" fill="#eb5757"/>
+<text x="358.25" y="592" font-size="9.5" font-weight="400" text-anchor="start" fill="#18212b">1 thing VLAN 40</text>
+<text x="467.1875" y="536" font-size="10.5" font-weight="600" text-anchor="middle" fill="#18212b">floor 2</text>
+<rect x="426.875" y="470" width="80.625" height="133" rx="9" fill="#ffffb0" opacity="0.6"/>
+<circle cx="439.875" cy="554" r="4.5" fill="#f2c94c"/>
+<text x="448.875" y="558" font-size="9.5" font-weight="400" text-anchor="start" fill="#18212b">15 PCs VLAN 10</text>
+<circle cx="439.875" cy="571" r="4.5" fill="#f2994a"/>
+<text x="448.875" y="575" font-size="9.5" font-weight="400" text-anchor="start" fill="#18212b">1 PC VLAN 20</text>
+<circle cx="439.875" cy="588" r="4.5" fill="#eb5757"/>
+<text x="448.875" y="592" font-size="9.5" font-weight="400" text-anchor="start" fill="#18212b">1 thing VLAN 40</text>
+<text x="557.8125" y="536" font-size="10.5" font-weight="600" text-anchor="middle" fill="#18212b">floor 2</text>
+<rect x="517.5" y="470" width="80.625" height="133" rx="9" fill="#ffffb0" opacity="0.6"/>
+<circle cx="530.5" cy="554" r="4.5" fill="#f2c94c"/>
+<text x="539.5" y="558" font-size="9.5" font-weight="400" text-anchor="start" fill="#18212b">15 PCs VLAN 10</text>
+<circle cx="530.5" cy="571" r="4.5" fill="#f2994a"/>
+<text x="539.5" y="575" font-size="9.5" font-weight="400" text-anchor="start" fill="#18212b">1 PC VLAN 20</text>
+<circle cx="530.5" cy="588" r="4.5" fill="#eb5757"/>
+<text x="539.5" y="592" font-size="9.5" font-weight="400" text-anchor="start" fill="#18212b">1 thing VLAN 40</text>
+<text x="648.4375" y="536" font-size="10.5" font-weight="600" text-anchor="middle" fill="#18212b">Library</text>
+<rect x="608.125" y="470" width="80.625" height="133" rx="9" fill="#ffffb0" opacity="0.6"/>
+<circle cx="621.125" cy="554" r="4.5" fill="#f2c94c"/>
+<text x="630.125" y="558" font-size="9.5" font-weight="400" text-anchor="start" fill="#18212b">15 PCs VLAN 10</text>
+<circle cx="621.125" cy="571" r="4.5" fill="#f2994a"/>
+<text x="630.125" y="575" font-size="9.5" font-weight="400" text-anchor="start" fill="#18212b">1 PC VLAN 20</text>
+<circle cx="621.125" cy="588" r="4.5" fill="#eb5757"/>
+<text x="630.125" y="592" font-size="9.5" font-weight="400" text-anchor="start" fill="#18212b">3 things VLAN 40</text>
+<text x="739.0625" y="536" font-size="10.5" font-weight="600" text-anchor="middle" fill="#18212b">Computer lab</text>
+<rect x="698.75" y="470" width="80.625" height="133" rx="9" fill="#ffffb0" opacity="0.6"/>
+<circle cx="711.75" cy="554" r="4.5" fill="#f2c94c"/>
+<text x="720.75" y="558" font-size="9.5" font-weight="400" text-anchor="start" fill="#18212b">15 PCs VLAN 10</text>
+<circle cx="711.75" cy="571" r="4.5" fill="#f2994a"/>
+<text x="720.75" y="575" font-size="9.5" font-weight="400" text-anchor="start" fill="#18212b">1 PC VLAN 20</text>
+<circle cx="711.75" cy="588" r="4.5" fill="#eb5757"/>
+<text x="720.75" y="592" font-size="9.5" font-weight="400" text-anchor="start" fill="#18212b">1 thing VLAN 40</text>
+<text x="829.6875" y="536" font-size="10.5" font-weight="600" text-anchor="middle" fill="#18212b">floor 2</text>
+<rect x="789.375" y="470" width="80.625" height="133" rx="9" fill="#ffffb0" opacity="0.6"/>
+<circle cx="802.375" cy="554" r="4.5" fill="#f2c94c"/>
+<text x="811.375" y="558" font-size="9.5" font-weight="400" text-anchor="start" fill="#18212b">15 PCs VLAN 10</text>
+<circle cx="802.375" cy="571" r="4.5" fill="#f2994a"/>
+<text x="811.375" y="575" font-size="9.5" font-weight="400" text-anchor="start" fill="#18212b">1 PC VLAN 20</text>
+<circle cx="802.375" cy="588" r="4.5" fill="#eb5757"/>
+<text x="811.375" y="592" font-size="9.5" font-weight="400" text-anchor="start" fill="#18212b">1 thing VLAN 40</text>
+<text x="920.3125" y="536" font-size="10.5" font-weight="600" text-anchor="middle" fill="#18212b">floor 2</text>
+<rect x="880.0" y="470" width="80.625" height="133" rx="9" fill="#ffffb0" opacity="0.6"/>
+<circle cx="893.0" cy="554" r="4.5" fill="#f2c94c"/>
+<text x="902.0" y="558" font-size="9.5" font-weight="400" text-anchor="start" fill="#18212b">15 PCs VLAN 10</text>
+<circle cx="893.0" cy="571" r="4.5" fill="#f2994a"/>
+<text x="902.0" y="575" font-size="9.5" font-weight="400" text-anchor="start" fill="#18212b">1 PC VLAN 20</text>
+<circle cx="893.0" cy="588" r="4.5" fill="#eb5757"/>
+<text x="902.0" y="592" font-size="9.5" font-weight="400" text-anchor="start" fill="#18212b">1 thing VLAN 40</text>
+<text x="1010.9375" y="536" font-size="10.5" font-weight="600" text-anchor="middle" fill="#18212b">floor 1</text>
+<rect x="970.625" y="470" width="80.625" height="133" rx="9" fill="#ffffb0" opacity="0.6"/>
+<circle cx="983.625" cy="554" r="4.5" fill="#f2c94c"/>
+<text x="992.625" y="558" font-size="9.5" font-weight="400" text-anchor="start" fill="#18212b">15 PCs VLAN 10</text>
+<circle cx="983.625" cy="571" r="4.5" fill="#f2994a"/>
+<text x="992.625" y="575" font-size="9.5" font-weight="400" text-anchor="start" fill="#18212b">1 PC VLAN 20</text>
+<circle cx="983.625" cy="588" r="4.5" fill="#eb5757"/>
+<text x="992.625" y="592" font-size="9.5" font-weight="400" text-anchor="start" fill="#18212b">2 things VLAN 40</text>
+<text x="1101.5625" y="536" font-size="10.5" font-weight="600" text-anchor="middle" fill="#18212b">floor 1</text>
+<rect x="1061.25" y="470" width="80.625" height="133" rx="9" fill="#ffffb0" opacity="0.6"/>
+<circle cx="1074.25" cy="554" r="4.5" fill="#f2c94c"/>
+<text x="1083.25" y="558" font-size="9.5" font-weight="400" text-anchor="start" fill="#18212b">15 PCs VLAN 10</text>
+<circle cx="1074.25" cy="571" r="4.5" fill="#f2994a"/>
+<text x="1083.25" y="575" font-size="9.5" font-weight="400" text-anchor="start" fill="#18212b">1 PC VLAN 20</text>
+<circle cx="1074.25" cy="588" r="4.5" fill="#eb5757"/>
+<text x="1083.25" y="592" font-size="9.5" font-weight="400" text-anchor="start" fill="#18212b">1 thing VLAN 40</text>
+<text x="1192.1875" y="536" font-size="10.5" font-weight="600" text-anchor="middle" fill="#18212b">Science lab</text>
+<rect x="1151.875" y="470" width="80.625" height="133" rx="9" fill="#ffffb0" opacity="0.6"/>
+<circle cx="1164.875" cy="554" r="4.5" fill="#f2c94c"/>
+<text x="1173.875" y="558" font-size="9.5" font-weight="400" text-anchor="start" fill="#18212b">15 PCs VLAN 10</text>
+<circle cx="1164.875" cy="571" r="4.5" fill="#f2994a"/>
+<text x="1173.875" y="575" font-size="9.5" font-weight="400" text-anchor="start" fill="#18212b">1 PC VLAN 20</text>
+<circle cx="1164.875" cy="588" r="4.5" fill="#eb5757"/>
+<text x="1173.875" y="592" font-size="9.5" font-weight="400" text-anchor="start" fill="#18212b">1 thing VLAN 40</text>
+<text x="1282.8125" y="536" font-size="10.5" font-weight="600" text-anchor="middle" fill="#18212b">floor 2</text>
+<rect x="1242.5" y="470" width="80.625" height="133" rx="9" fill="#ffffb0" opacity="0.6"/>
+<circle cx="1255.5" cy="554" r="4.5" fill="#f2c94c"/>
+<text x="1264.5" y="558" font-size="9.5" font-weight="400" text-anchor="start" fill="#18212b">15 PCs VLAN 10</text>
+<circle cx="1255.5" cy="571" r="4.5" fill="#f2994a"/>
+<text x="1264.5" y="575" font-size="9.5" font-weight="400" text-anchor="start" fill="#18212b">1 PC VLAN 20</text>
+<circle cx="1255.5" cy="588" r="4.5" fill="#eb5757"/>
+<text x="1264.5" y="592" font-size="9.5" font-weight="400" text-anchor="start" fill="#18212b">1 thing VLAN 40</text>
+<text x="1373.4375" y="536" font-size="10.5" font-weight="600" text-anchor="middle" fill="#18212b">Cafeteria and gym</text>
+<rect x="1333.125" y="470" width="80.625" height="116" rx="9" fill="#ffffb0" opacity="0.6"/>
+<circle cx="1346.125" cy="554" r="4.5" fill="#f2994a"/>
+<text x="1355.125" y="558" font-size="9.5" font-weight="400" text-anchor="start" fill="#18212b">2 PCs VLAN 20</text>
+<circle cx="1346.125" cy="571" r="4.5" fill="#eb5757"/>
+<text x="1355.125" y="575" font-size="9.5" font-weight="400" text-anchor="start" fill="#18212b">7 things VLAN 40</text>
+<text x="1464.0625" y="536" font-size="10.5" font-weight="600" text-anchor="middle" fill="#18212b">IT office</text>
+<rect x="1423.75" y="470" width="80.625" height="116" rx="9" fill="#ffffb0" opacity="0.6"/>
+<circle cx="1436.75" cy="554" r="4.5" fill="#eb5757"/>
+<text x="1445.75" y="558" font-size="9.5" font-weight="400" text-anchor="start" fill="#18212b">1 thing VLAN 40</text>
+<circle cx="1436.75" cy="571" r="4.5" fill="#bb6bd9"/>
+<text x="1445.75" y="575" font-size="9.5" font-weight="400" text-anchor="start" fill="#18212b">1 PC VLAN 99</text>
+<text x="1554.6875" y="536" font-size="10.5" font-weight="600" text-anchor="middle" fill="#18212b">Server room, IT</text>
+<rect x="1514.375" y="470" width="80.625" height="116" rx="9" fill="#b8f8f8" opacity="0.6"/>
+<circle cx="1527.375" cy="554" r="4.5" fill="#56ccf2"/>
+<text x="1536.375" y="558" font-size="9.5" font-weight="400" text-anchor="start" fill="#18212b">6 servers VLAN 70</text>
+<circle cx="1527.375" cy="571" r="4.5" fill="#bb6bd9"/>
+<text x="1536.375" y="575" font-size="9.5" font-weight="400" text-anchor="start" fill="#18212b">2 PCs VLAN 99</text>
+<line x1="249" y1="632" x2="595" y2="632" stroke="#b8862b" stroke-width="3"/>
+<text x="421.875" y="650" font-size="12" font-weight="700" text-anchor="middle" fill="#18212b">E wing</text>
+<line x1="611" y1="632" x2="958" y2="632" stroke="#b8862b" stroke-width="3"/>
+<text x="784.375" y="650" font-size="12" font-weight="700" text-anchor="middle" fill="#18212b">C wing</text>
+<line x1="974" y1="632" x2="1320" y2="632" stroke="#b8862b" stroke-width="3"/>
+<text x="1146.875" y="650" font-size="12" font-weight="700" text-anchor="middle" fill="#18212b">B wing</text>
+<line x1="1336" y1="632" x2="1411" y2="632" stroke="#b8862b" stroke-width="3"/>
+<text x="1373.4375" y="650" font-size="12" font-weight="700" text-anchor="middle" fill="#18212b">A wing</text>
+<line x1="1427" y1="632" x2="1501" y2="632" stroke="#b8862b" stroke-width="3"/>
+<text x="1464.0625" y="650" font-size="12" font-weight="700" text-anchor="middle" fill="#18212b">M wing</text>
 <line x1="700" y1="260" x2="1040" y2="260" stroke="#44515e" stroke-width="3.2" opacity="0.9"/>
 <text x="870.0" y="254.0" font-size="9.5" font-weight="600" text-anchor="middle" fill="#44515e">LACP x2</text>
 <line x1="700" y1="260" x2="700" y2="360" stroke="#44515e" stroke-width="1.1" opacity="0.55"/>
@@ -114,36 +156,40 @@
 <line x1="1040" y1="260" x2="1040" y2="160" stroke="#44515e" stroke-width="1.1" opacity="0.55"/>
 <line x1="700" y1="360" x2="1040" y2="360" stroke="#44515e" stroke-width="3.2" opacity="0.9"/>
 <text x="870.0" y="354.0" font-size="9.5" font-weight="600" text-anchor="middle" fill="#44515e">LACP x2</text>
-<line x1="700" y1="360" x2="1134" y2="500" stroke="#44515e" stroke-width="1.1" opacity="0.55"/>
-<line x1="700" y1="360" x2="1238" y2="500" stroke="#44515e" stroke-width="1.1" opacity="0.55"/>
-<line x1="700" y1="360" x2="1341" y2="500" stroke="#44515e" stroke-width="1.1" opacity="0.55"/>
-<line x1="700" y1="360" x2="1445" y2="500" stroke="#44515e" stroke-width="1.1" opacity="0.55"/>
-<line x1="700" y1="360" x2="720" y2="500" stroke="#44515e" stroke-width="1.1" opacity="0.55"/>
-<line x1="700" y1="360" x2="823" y2="500" stroke="#44515e" stroke-width="1.1" opacity="0.55"/>
-<line x1="700" y1="360" x2="927" y2="500" stroke="#44515e" stroke-width="1.1" opacity="0.55"/>
-<line x1="700" y1="360" x2="1030" y2="500" stroke="#44515e" stroke-width="1.1" opacity="0.55"/>
-<line x1="700" y1="360" x2="305" y2="500" stroke="#44515e" stroke-width="1.1" opacity="0.55"/>
-<line x1="700" y1="360" x2="409" y2="500" stroke="#44515e" stroke-width="1.1" opacity="0.55"/>
-<line x1="700" y1="360" x2="512" y2="500" stroke="#44515e" stroke-width="1.1" opacity="0.55"/>
-<line x1="700" y1="360" x2="616" y2="500" stroke="#44515e" stroke-width="1.1" opacity="0.55"/>
-<line x1="700" y1="360" x2="1548" y2="500" stroke="#44515e" stroke-width="3.2" opacity="0.9"/>
-<text x="1124.107142857143" y="424.0" font-size="9.5" font-weight="600" text-anchor="middle" fill="#44515e">LACP x2</text>
-<line x1="700" y1="360" x2="202" y2="500" stroke="#44515e" stroke-width="1.1" opacity="0.55"/>
-<line x1="1040" y1="360" x2="1134" y2="500" stroke="#44515e" stroke-width="1.1" opacity="0.55"/>
-<line x1="1040" y1="360" x2="1238" y2="500" stroke="#44515e" stroke-width="1.1" opacity="0.55"/>
-<line x1="1040" y1="360" x2="1341" y2="500" stroke="#44515e" stroke-width="1.1" opacity="0.55"/>
-<line x1="1040" y1="360" x2="1445" y2="500" stroke="#44515e" stroke-width="1.1" opacity="0.55"/>
-<line x1="1040" y1="360" x2="720" y2="500" stroke="#44515e" stroke-width="1.1" opacity="0.55"/>
-<line x1="1040" y1="360" x2="823" y2="500" stroke="#44515e" stroke-width="1.1" opacity="0.55"/>
-<line x1="1040" y1="360" x2="927" y2="500" stroke="#44515e" stroke-width="1.1" opacity="0.55"/>
-<line x1="1040" y1="360" x2="1030" y2="500" stroke="#44515e" stroke-width="1.1" opacity="0.55"/>
-<line x1="1040" y1="360" x2="305" y2="500" stroke="#44515e" stroke-width="1.1" opacity="0.55"/>
-<line x1="1040" y1="360" x2="409" y2="500" stroke="#44515e" stroke-width="1.1" opacity="0.55"/>
-<line x1="1040" y1="360" x2="512" y2="500" stroke="#44515e" stroke-width="1.1" opacity="0.55"/>
-<line x1="1040" y1="360" x2="616" y2="500" stroke="#44515e" stroke-width="1.1" opacity="0.55"/>
-<line x1="1040" y1="360" x2="1548" y2="500" stroke="#44515e" stroke-width="3.2" opacity="0.9"/>
-<text x="1294.107142857143" y="424.0" font-size="9.5" font-weight="600" text-anchor="middle" fill="#44515e">LACP x2</text>
-<line x1="1040" y1="360" x2="202" y2="500" stroke="#44515e" stroke-width="1.1" opacity="0.55"/>
+<line x1="700" y1="360" x2="1373" y2="500" stroke="#44515e" stroke-width="1.1" opacity="0.55"/>
+<line x1="700" y1="360" x2="1011" y2="500" stroke="#44515e" stroke-width="1.1" opacity="0.55"/>
+<line x1="700" y1="360" x2="1102" y2="500" stroke="#44515e" stroke-width="1.1" opacity="0.55"/>
+<line x1="700" y1="360" x2="1192" y2="500" stroke="#44515e" stroke-width="1.1" opacity="0.55"/>
+<line x1="700" y1="360" x2="1283" y2="500" stroke="#44515e" stroke-width="1.1" opacity="0.55"/>
+<line x1="700" y1="360" x2="648" y2="500" stroke="#44515e" stroke-width="1.1" opacity="0.55"/>
+<line x1="700" y1="360" x2="739" y2="500" stroke="#44515e" stroke-width="1.1" opacity="0.55"/>
+<line x1="700" y1="360" x2="830" y2="500" stroke="#44515e" stroke-width="1.1" opacity="0.55"/>
+<line x1="700" y1="360" x2="920" y2="500" stroke="#44515e" stroke-width="1.1" opacity="0.55"/>
+<line x1="700" y1="360" x2="286" y2="500" stroke="#44515e" stroke-width="1.1" opacity="0.55"/>
+<line x1="700" y1="360" x2="377" y2="500" stroke="#44515e" stroke-width="1.1" opacity="0.55"/>
+<line x1="700" y1="360" x2="467" y2="500" stroke="#44515e" stroke-width="1.1" opacity="0.55"/>
+<line x1="700" y1="360" x2="558" y2="500" stroke="#44515e" stroke-width="1.1" opacity="0.55"/>
+<line x1="700" y1="360" x2="1464" y2="500" stroke="#44515e" stroke-width="1.1" opacity="0.55"/>
+<line x1="700" y1="360" x2="1555" y2="500" stroke="#44515e" stroke-width="3.2" opacity="0.9"/>
+<text x="1127.34375" y="424.0" font-size="9.5" font-weight="600" text-anchor="middle" fill="#44515e">LACP x2</text>
+<line x1="700" y1="360" x2="195" y2="500" stroke="#44515e" stroke-width="1.1" opacity="0.55"/>
+<line x1="1040" y1="360" x2="1373" y2="500" stroke="#44515e" stroke-width="1.1" opacity="0.55"/>
+<line x1="1040" y1="360" x2="1011" y2="500" stroke="#44515e" stroke-width="1.1" opacity="0.55"/>
+<line x1="1040" y1="360" x2="1102" y2="500" stroke="#44515e" stroke-width="1.1" opacity="0.55"/>
+<line x1="1040" y1="360" x2="1192" y2="500" stroke="#44515e" stroke-width="1.1" opacity="0.55"/>
+<line x1="1040" y1="360" x2="1283" y2="500" stroke="#44515e" stroke-width="1.1" opacity="0.55"/>
+<line x1="1040" y1="360" x2="648" y2="500" stroke="#44515e" stroke-width="1.1" opacity="0.55"/>
+<line x1="1040" y1="360" x2="739" y2="500" stroke="#44515e" stroke-width="1.1" opacity="0.55"/>
+<line x1="1040" y1="360" x2="830" y2="500" stroke="#44515e" stroke-width="1.1" opacity="0.55"/>
+<line x1="1040" y1="360" x2="920" y2="500" stroke="#44515e" stroke-width="1.1" opacity="0.55"/>
+<line x1="1040" y1="360" x2="286" y2="500" stroke="#44515e" stroke-width="1.1" opacity="0.55"/>
+<line x1="1040" y1="360" x2="377" y2="500" stroke="#44515e" stroke-width="1.1" opacity="0.55"/>
+<line x1="1040" y1="360" x2="467" y2="500" stroke="#44515e" stroke-width="1.1" opacity="0.55"/>
+<line x1="1040" y1="360" x2="558" y2="500" stroke="#44515e" stroke-width="1.1" opacity="0.55"/>
+<line x1="1040" y1="360" x2="1464" y2="500" stroke="#44515e" stroke-width="1.1" opacity="0.55"/>
+<line x1="1040" y1="360" x2="1555" y2="500" stroke="#44515e" stroke-width="3.2" opacity="0.9"/>
+<text x="1297.34375" y="424.0" font-size="9.5" font-weight="600" text-anchor="middle" fill="#44515e">LACP x2</text>
+<line x1="1040" y1="360" x2="195" y2="500" stroke="#44515e" stroke-width="1.1" opacity="0.55"/>
 <line x1="1090" y1="60" x2="870" y2="60" stroke="#44515e" stroke-width="1.1" opacity="0.55"/>
 <line x1="870" y1="60" x2="700" y2="160" stroke="#44515e" stroke-width="1.1" opacity="0.55"/>
 <line x1="870" y1="60" x2="1040" y2="160" stroke="#44515e" stroke-width="1.1" opacity="0.55"/>
@@ -155,20 +201,22 @@
 <g class="node" data-name="CORE-L3-2"><rect x="984.0" y="243" width="112" height="34" rx="7" fill="#ffffff" stroke="#18212b" stroke-width="1.2"/><text x="1040.0" y="264.5" font-size="12" font-weight="600" text-anchor="middle" fill="#18212b">CORE-L3-2</text></g>
 <g class="node" data-name="DIST-L3-1"><rect x="644.0" y="343" width="112" height="34" rx="7" fill="#ffffff" stroke="#18212b" stroke-width="1.2"/><text x="700.0" y="364.5" font-size="12" font-weight="600" text-anchor="middle" fill="#18212b">DIST-L3-1</text></g>
 <g class="node" data-name="DIST-L3-2"><rect x="984.0" y="343" width="112" height="34" rx="7" fill="#ffffff" stroke="#18212b" stroke-width="1.2"/><text x="1040.0" y="364.5" font-size="12" font-weight="600" text-anchor="middle" fill="#18212b">DIST-L3-2</text></g>
-<g class="node" data-name="SW-OFFICE"><rect x="157.0" y="483" width="89.57142857142857" height="34" rx="7" fill="#ffffff" stroke="#18212b" stroke-width="1.2"/><text x="201.78571428571428" y="504.5" font-size="12" font-weight="600" text-anchor="middle" fill="#18212b">SW-OFFICE</text></g>
-<g class="node" data-name="SW-E103"><rect x="260.5714285714286" y="483" width="89.57142857142857" height="34" rx="7" fill="#ffffff" stroke="#18212b" stroke-width="1.2"/><text x="305.3571428571429" y="504.5" font-size="12" font-weight="600" text-anchor="middle" fill="#18212b">SW-E103</text></g>
-<g class="node" data-name="SW-E110"><rect x="364.14285714285717" y="483" width="89.57142857142857" height="34" rx="7" fill="#ffffff" stroke="#18212b" stroke-width="1.2"/><text x="408.92857142857144" y="504.5" font-size="12" font-weight="600" text-anchor="middle" fill="#18212b">SW-E110</text></g>
-<g class="node" data-name="SW-E203"><rect x="467.7142857142857" y="483" width="89.57142857142857" height="34" rx="7" fill="#ffffff" stroke="#18212b" stroke-width="1.2"/><text x="512.5" y="504.5" font-size="12" font-weight="600" text-anchor="middle" fill="#18212b">SW-E203</text></g>
-<g class="node" data-name="SW-E230"><rect x="571.2857142857142" y="483" width="89.57142857142857" height="34" rx="7" fill="#ffffff" stroke="#18212b" stroke-width="1.2"/><text x="616.0714285714286" y="504.5" font-size="12" font-weight="600" text-anchor="middle" fill="#18212b">SW-E230</text></g>
-<g class="node" data-name="SW-C114"><rect x="674.8571428571428" y="483" width="89.57142857142857" height="34" rx="7" fill="#ffffff" stroke="#18212b" stroke-width="1.2"/><text x="719.6428571428571" y="504.5" font-size="12" font-weight="600" text-anchor="middle" fill="#18212b">SW-C114</text></g>
-<g class="node" data-name="SW-C116"><rect x="778.4285714285713" y="483" width="89.57142857142857" height="34" rx="7" fill="#ffffff" stroke="#18212b" stroke-width="1.2"/><text x="823.2142857142857" y="504.5" font-size="12" font-weight="600" text-anchor="middle" fill="#18212b">SW-C116</text></g>
-<g class="node" data-name="SW-C214"><rect x="881.9999999999999" y="483" width="89.57142857142857" height="34" rx="7" fill="#ffffff" stroke="#18212b" stroke-width="1.2"/><text x="926.7857142857142" y="504.5" font-size="12" font-weight="600" text-anchor="middle" fill="#18212b">SW-C214</text></g>
-<g class="node" data-name="SW-C216"><rect x="985.5714285714286" y="483" width="89.57142857142857" height="34" rx="7" fill="#ffffff" stroke="#18212b" stroke-width="1.2"/><text x="1030.357142857143" y="504.5" font-size="12" font-weight="600" text-anchor="middle" fill="#18212b">SW-C216</text></g>
-<g class="node" data-name="SW-B126"><rect x="1089.1428571428573" y="483" width="89.57142857142857" height="34" rx="7" fill="#ffffff" stroke="#18212b" stroke-width="1.2"/><text x="1133.9285714285716" y="504.5" font-size="12" font-weight="600" text-anchor="middle" fill="#18212b">SW-B126</text></g>
-<g class="node" data-name="SW-B128"><rect x="1192.7142857142858" y="483" width="89.57142857142857" height="34" rx="7" fill="#ffffff" stroke="#18212b" stroke-width="1.2"/><text x="1237.5" y="504.5" font-size="12" font-weight="600" text-anchor="middle" fill="#18212b">SW-B128</text></g>
-<g class="node" data-name="SW-B226"><rect x="1296.2857142857142" y="483" width="89.57142857142857" height="34" rx="7" fill="#ffffff" stroke="#18212b" stroke-width="1.2"/><text x="1341.0714285714284" y="504.5" font-size="12" font-weight="600" text-anchor="middle" fill="#18212b">SW-B226</text></g>
-<g class="node" data-name="SW-B228"><rect x="1399.857142857143" y="483" width="89.57142857142857" height="34" rx="7" fill="#ffffff" stroke="#18212b" stroke-width="1.2"/><text x="1444.642857142857" y="504.5" font-size="12" font-weight="600" text-anchor="middle" fill="#18212b">SW-B228</text></g>
-<g class="node" data-name="SW-MDF"><rect x="1503.4285714285716" y="483" width="89.57142857142857" height="34" rx="7" fill="#ffffff" stroke="#18212b" stroke-width="1.2"/><text x="1548.2142857142858" y="504.5" font-size="12" font-weight="600" text-anchor="middle" fill="#18212b">SW-MDF</text></g>
+<g class="node" data-name="SW-OFFICE"><rect x="157.0" y="483" width="76.625" height="34" rx="7" fill="#ffffff" stroke="#18212b" stroke-width="1.2"/><text x="195.3125" y="504.5" font-size="12" font-weight="600" text-anchor="middle" fill="#18212b">SW-OFFICE</text></g>
+<g class="node" data-name="SW-E103"><rect x="247.625" y="483" width="76.625" height="34" rx="7" fill="#ffffff" stroke="#18212b" stroke-width="1.2"/><text x="285.9375" y="504.5" font-size="12" font-weight="600" text-anchor="middle" fill="#18212b">SW-E103</text></g>
+<g class="node" data-name="SW-E110"><rect x="338.25" y="483" width="76.625" height="34" rx="7" fill="#ffffff" stroke="#18212b" stroke-width="1.2"/><text x="376.5625" y="504.5" font-size="12" font-weight="600" text-anchor="middle" fill="#18212b">SW-E110</text></g>
+<g class="node" data-name="SW-E203"><rect x="428.875" y="483" width="76.625" height="34" rx="7" fill="#ffffff" stroke="#18212b" stroke-width="1.2"/><text x="467.1875" y="504.5" font-size="12" font-weight="600" text-anchor="middle" fill="#18212b">SW-E203</text></g>
+<g class="node" data-name="SW-E230"><rect x="519.5" y="483" width="76.625" height="34" rx="7" fill="#ffffff" stroke="#18212b" stroke-width="1.2"/><text x="557.8125" y="504.5" font-size="12" font-weight="600" text-anchor="middle" fill="#18212b">SW-E230</text></g>
+<g class="node" data-name="SW-C114"><rect x="610.125" y="483" width="76.625" height="34" rx="7" fill="#ffffff" stroke="#18212b" stroke-width="1.2"/><text x="648.4375" y="504.5" font-size="12" font-weight="600" text-anchor="middle" fill="#18212b">SW-C114</text></g>
+<g class="node" data-name="SW-C116"><rect x="700.75" y="483" width="76.625" height="34" rx="7" fill="#ffffff" stroke="#18212b" stroke-width="1.2"/><text x="739.0625" y="504.5" font-size="12" font-weight="600" text-anchor="middle" fill="#18212b">SW-C116</text></g>
+<g class="node" data-name="SW-C214"><rect x="791.375" y="483" width="76.625" height="34" rx="7" fill="#ffffff" stroke="#18212b" stroke-width="1.2"/><text x="829.6875" y="504.5" font-size="12" font-weight="600" text-anchor="middle" fill="#18212b">SW-C214</text></g>
+<g class="node" data-name="SW-C216"><rect x="882.0" y="483" width="76.625" height="34" rx="7" fill="#ffffff" stroke="#18212b" stroke-width="1.2"/><text x="920.3125" y="504.5" font-size="12" font-weight="600" text-anchor="middle" fill="#18212b">SW-C216</text></g>
+<g class="node" data-name="SW-B126"><rect x="972.625" y="483" width="76.625" height="34" rx="7" fill="#ffffff" stroke="#18212b" stroke-width="1.2"/><text x="1010.9375" y="504.5" font-size="12" font-weight="600" text-anchor="middle" fill="#18212b">SW-B126</text></g>
+<g class="node" data-name="SW-B128"><rect x="1063.25" y="483" width="76.625" height="34" rx="7" fill="#ffffff" stroke="#18212b" stroke-width="1.2"/><text x="1101.5625" y="504.5" font-size="12" font-weight="600" text-anchor="middle" fill="#18212b">SW-B128</text></g>
+<g class="node" data-name="SW-B226"><rect x="1153.875" y="483" width="76.625" height="34" rx="7" fill="#ffffff" stroke="#18212b" stroke-width="1.2"/><text x="1192.1875" y="504.5" font-size="12" font-weight="600" text-anchor="middle" fill="#18212b">SW-B226</text></g>
+<g class="node" data-name="SW-B228"><rect x="1244.5" y="483" width="76.625" height="34" rx="7" fill="#ffffff" stroke="#18212b" stroke-width="1.2"/><text x="1282.8125" y="504.5" font-size="12" font-weight="600" text-anchor="middle" fill="#18212b">SW-B228</text></g>
+<g class="node" data-name="SW-A100"><rect x="1335.125" y="483" width="76.625" height="34" rx="7" fill="#ffffff" stroke="#18212b" stroke-width="1.2"/><text x="1373.4375" y="504.5" font-size="12" font-weight="600" text-anchor="middle" fill="#18212b">SW-A100</text></g>
+<g class="node" data-name="SW-M101"><rect x="1425.75" y="483" width="76.625" height="34" rx="7" fill="#ffffff" stroke="#18212b" stroke-width="1.2"/><text x="1464.0625" y="504.5" font-size="12" font-weight="600" text-anchor="middle" fill="#18212b">SW-M101</text></g>
+<g class="node" data-name="SW-MDF"><rect x="1516.375" y="483" width="76.625" height="34" rx="7" fill="#ffffff" stroke="#18212b" stroke-width="1.2"/><text x="1554.6875" y="504.5" font-size="12" font-weight="600" text-anchor="middle" fill="#18212b">SW-MDF</text></g>
 <text x="150" y="700" font-size="13" font-weight="700" text-anchor="start" fill="#18212b">VLANs and subnets</text>
 <text x="150" y="722" font-size="10.5" font-weight="600" text-anchor="start" fill="#5f6c7a"></text>
 <text x="190" y="722" font-size="10.5" font-weight="600" text-anchor="start" fill="#5f6c7a">VLAN</text>
@@ -190,19 +238,24 @@
 <text x="330" y="780" font-size="11.5" font-weight="400" text-anchor="start" fill="#18212b">MANAGEMENT</text>
 <text x="480" y="780" font-size="11.5" font-weight="400" text-anchor="start" fill="#18212b">10.10.30.0/24</text>
 <text x="620" y="780" font-size="11.5" font-weight="400" text-anchor="start" fill="#18212b">10.10.30.1</text>
-<circle cx="162" cy="795" r="5" fill="#56ccf2"/>
-<text x="190" y="799" font-size="11.5" font-weight="400" text-anchor="start" fill="#18212b">70</text>
-<text x="330" y="799" font-size="11.5" font-weight="400" text-anchor="start" fill="#18212b">SERVERS</text>
-<text x="480" y="799" font-size="11.5" font-weight="400" text-anchor="start" fill="#18212b">10.10.70.0/24</text>
-<text x="620" y="799" font-size="11.5" font-weight="400" text-anchor="start" fill="#18212b">10.10.70.1</text>
-<circle cx="162" cy="814" r="5" fill="#bb6bd9"/>
-<text x="190" y="818" font-size="11.5" font-weight="400" text-anchor="start" fill="#18212b">99</text>
-<text x="330" y="818" font-size="11.5" font-weight="400" text-anchor="start" fill="#18212b">NETWORK-IT</text>
-<text x="480" y="818" font-size="11.5" font-weight="400" text-anchor="start" fill="#18212b">10.10.99.0/24</text>
-<text x="620" y="818" font-size="11.5" font-weight="400" text-anchor="start" fill="#18212b">10.10.99.1</text>
+<circle cx="162" cy="795" r="5" fill="#eb5757"/>
+<text x="190" y="799" font-size="11.5" font-weight="400" text-anchor="start" fill="#18212b">40</text>
+<text x="330" y="799" font-size="11.5" font-weight="400" text-anchor="start" fill="#18212b">BUILDING</text>
+<text x="480" y="799" font-size="11.5" font-weight="400" text-anchor="start" fill="#18212b">10.10.40.0/24</text>
+<text x="620" y="799" font-size="11.5" font-weight="400" text-anchor="start" fill="#18212b">10.10.40.1</text>
+<circle cx="162" cy="814" r="5" fill="#56ccf2"/>
+<text x="190" y="818" font-size="11.5" font-weight="400" text-anchor="start" fill="#18212b">70</text>
+<text x="330" y="818" font-size="11.5" font-weight="400" text-anchor="start" fill="#18212b">SERVERS</text>
+<text x="480" y="818" font-size="11.5" font-weight="400" text-anchor="start" fill="#18212b">10.10.70.0/24</text>
+<text x="620" y="818" font-size="11.5" font-weight="400" text-anchor="start" fill="#18212b">10.10.70.1</text>
+<circle cx="162" cy="833" r="5" fill="#bb6bd9"/>
+<text x="190" y="837" font-size="11.5" font-weight="400" text-anchor="start" fill="#18212b">99</text>
+<text x="330" y="837" font-size="11.5" font-weight="400" text-anchor="start" fill="#18212b">NETWORK-IT</text>
+<text x="480" y="837" font-size="11.5" font-weight="400" text-anchor="start" fill="#18212b">10.10.99.0/24</text>
+<text x="620" y="837" font-size="11.5" font-weight="400" text-anchor="start" fill="#18212b">10.10.99.1</text>
 <text x="800" y="722" font-size="11.5" font-weight="400" text-anchor="start" fill="#18212b">Router to router links: /30 subnets from 10.10.0.0, OSPF area 0</text>
 <text x="800" y="741" font-size="11.5" font-weight="400" text-anchor="start" fill="#18212b">Loopbacks (router IDs): 10.10.255.0/24</text>
 <text x="800" y="760" font-size="11.5" font-weight="400" text-anchor="start" fill="#18212b">ISP links: 203.0.113.0/30 and 203.0.113.4/30, public 203.0.113.8/29</text>
 <text x="800" y="779" font-size="11.5" font-weight="400" text-anchor="start" fill="#5f6c7a">Thin line: one cable. Thick line: EtherChannel (LACP).</text>
-<text x="800" y="798" font-size="11.5" font-weight="400" text-anchor="start" fill="#5f6c7a">230 devices, 204 PCs and servers, 249 cables</text>
+<text x="800" y="798" font-size="11.5" font-weight="400" text-anchor="start" fill="#5f6c7a">264 devices, 236 PCs and servers, 285 cables</text>
 </svg>

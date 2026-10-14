@@ -205,8 +205,8 @@ def test_room_is_added_to_a_copy_of_the_lab(tmp_path):
     pktbuild.add_room("Z999", copy)
     after = labtest.Picture(copy)
 
-    assert len(after.devices) == len(before.devices) + 17          # a switch and 16 PCs
-    assert len(after.links) == len(before.links) + 18              # 16 PCs and two uplinks
+    assert len(after.devices) == len(before.devices) + 18          # a switch, 16 PCs and the smartboard
+    assert len(after.links) == len(before.links) + 19              # 16 PCs, the smartboard and two uplinks
     assert len(set(after.devices)) == len(after.devices)
     assert {other for other, port in after.cabled("SW-Z999").values() if other.startswith("DIST")} == \
         {"DIST-L3-1", "DIST-L3-2"}
@@ -214,7 +214,33 @@ def test_room_is_added_to_a_copy_of_the_lab(tmp_path):
     assert set(after.hosts) <= after.reach_isp()
     # the tests that only look at cables and configs still pass with the new room
     tests = {t["id"]: t for t in labtest.run(copy)["tests"]}
-    assert all(tests[name]["passed"] for name in ("single-failure", "two-uplinks", "trunks", "port-security"))
+    assert all(tests[name]["passed"] for name in ("single-failure", "two-uplinks", "trunks", "port-security",
+                                                  "edge-ports", "unused-ports"))
+
+
+def test_thing_is_added_to_a_copy_of_the_lab(tmp_path):
+    copy = str(tmp_path / "things.pkt")
+    shutil.copy(LAB, copy)
+    before = labtest.Picture(copy)
+    pktbuild.add_thing("CAM-TEST", "camera", "SW-E230", "Room E230", copy)
+    after = labtest.Picture(copy)
+
+    assert len(after.devices) == len(before.devices) + 1
+    port = next(port for port, (other, other_port) in after.cabled("SW-E230").items() if other == "CAM-TEST")
+    assert port not in before.cabled("SW-E230")                    # it took a port that was free
+    assert "switchport access vlan 40" in after.ports("SW-E230")[port]
+    assert "CAM-TEST" in after.reach_isp()
+    # and it can be taken out again: the port is parked, nothing else is touched
+    lab = pktconfig.Lab(copy)
+    pktbuild.remove_things(lab, ["CAM-TEST"])
+    lab.save()
+    again = labtest.Picture(copy)
+    assert again.devices == before.devices and sorted(again.links) == sorted(before.links)
+    assert again.configs == before.configs
+    with pytest.raises(pktconfig.Problem):
+        pktbuild.add_thing("CAM-TEST2", "toaster", "SW-E230", "Room E230", copy, write=False)
+    with pytest.raises(pktconfig.Problem):
+        pktbuild.add_thing("E230-BOARD", "smartboard", "SW-E230", "Room E230", copy, write=False)   # already there
 
 
 def test_bad_room_numbers_are_refused(tmp_path):
@@ -242,17 +268,68 @@ def test_rooms_are_grouped_by_wing_and_floor():
 
 
 def test_nothing_on_the_canvas_overlaps():
-    boxes = pktlayout.boxes()
-    for i, a in enumerate(boxes):
-        for b in boxes[i + 1:]:
+    plan = pktlayout.plan()
+    solid = plan.floors + plan.walls                               # floors and walls never lie on each other
+    for i, a in enumerate(solid):
+        for b in solid[i + 1:]:
             assert not (a[0] < b[2] and b[0] < a[2] and a[1] < b[3] and b[1] < a[3]), (a, b)
-    places = list(pktlayout.positions().values())
+    places = list(plan.where.values())
     assert len(set(places)) == len(places)                         # no two devices on the same spot
+
+
+def test_every_device_stands_on_a_floor():
+    plan = pktlayout.plan()
+    names = {row["name"] for row in pktlayout.inventory()}
+    assert names <= set(plan.where)                                # everything in the inventory has a place
+    for name, (x, y) in plan.where.items():
+        assert any(f[0] <= x <= f[2] and f[1] <= y <= f[3] for f in plan.floors), name
+    # a classroom has its smartboard and the commons are not a classroom
+    rooms = {room[1]: room[3] for room in pktlayout.rooms()}
+    assert "E230-BOARD" in rooms["SW-E230"] and "GYM-SCOREBOARD" in rooms["SW-A100"]
+    assert "COACH-PC" in rooms["SW-A100"] and "IT-PC3" in rooms["SW-M101"]
+    assert "A100" not in pktlayout.classrooms() and "M101" not in pktlayout.classrooms()
+
+
+def test_pictures_of_the_things_are_real_png_files():
+    import pkticons
+    assert set(pktbuild.THINGS) == set(pkticons.ICONS)
+    for kind in pkticons.ICONS:
+        assert pkticons.png(kind).startswith(b"\x89PNG")
 
 
 def test_building_sketch_has_every_room_of_the_lab():
     sketch = floorplan.svg()
-    for room in pktlayout.classrooms():
+    for room in pktlayout.classrooms() + ["A100", "M101"]:
         assert f">SW-{room}<" in sketch
     with open(os.path.join(ROOT, "floorplan.svg")) as f:
         assert f.read() == sketch                                  # the saved sketch is up to date
+
+
+# ---------------------------------------------------------------- the page of netcheck_ui.py
+
+def test_page_gets_every_switch_and_wing_to_draw():
+    import netcheck_ui
+    graph = netcheck_ui.graph()
+    picture = labtest.Picture(LAB)
+    assert [a["name"] for a in graph["access"]] and {a["name"] for a in graph["access"]} == set(picture.access)
+    assert all(a["uplinks"] == ["DIST-L3-1", "DIST-L3-2"] for a in graph["access"])
+    assert [span["wing"] for span in graph["spans"]] == list(pktlayout.wings())
+    drawn = {name for layer in graph["layers"] for name in layer["names"]} | set(picture.access)
+    assert all(link["a"] in drawn and link["b"] in drawn for link in graph["links"])
+
+
+def test_switching_a_device_off_on_the_page():
+    import netcheck_ui
+    assert netcheck_ui.fail("DIST-L3-1")["lost"] == 0              # the other distribution switch takes over
+    assert netcheck_ui.fail("SW-E230")["lost"] == 17               # a room switch has no backup: 16 PCs, the smartboard
+    with pytest.raises(pktconfig.Problem):
+        netcheck_ui.fail("E230-PC01")
+
+
+def test_page_files_are_served_and_nothing_else():
+    import netcheck_ui
+    for name in ("/", "/app.js", "/style.css", "/vendor/react.production.min.js"):
+        text, kind = netcheck_ui.page_file(name)
+        assert text and kind
+    assert netcheck_ui.page_file("/../netcheck_ui.py") == (None, None)
+    assert netcheck_ui.page_file("/../../README.md") == (None, None)

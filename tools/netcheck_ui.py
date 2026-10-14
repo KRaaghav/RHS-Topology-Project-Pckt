@@ -6,11 +6,14 @@ Run it with:   python3 netcheck_ui.py
 (or double click "Start NetCheck.command")
 
 It starts a tiny web server that only this computer can reach and opens the page in the
-browser. The buttons on the page call the same functions as netcheck.py, netconfig.py,
-pktconfig.py and pktlayout.py, so there is no second copy of the logic.
+browser. The page is in the ui folder next to this file. It is written with React, but
+React is saved in ui/vendor, so nothing has to be installed and it works without internet.
+The buttons on the page call the same functions as netcheck.py, netconfig.py, pktconfig.py,
+pktlayout.py, pktbuild.py and labtest.py, so there is no second copy of the logic.
 
-The page has four tabs:
+The page has six pages:
 
+  Overview   health score, counts, the topology (click to break a device) and the building in 3D
   Lab        the routers and switches inside the Packet Tracer file, click one to read its config
   Configure  pick devices and a change, see what it would do, write it into the lab
   Monitor    measurable tests of the lab with a score, and the history of that score
@@ -40,6 +43,8 @@ import pktlayout
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 CONFIGS = os.path.join(HERE, "..", "configs")
+UI = os.path.join(HERE, "ui")                      # the page itself: index.html, style.css and the .js files
+KINDS = {".html": "text/html", ".css": "text/css", ".js": "text/javascript", ".svg": "image/svg+xml"}
 PORT = 8765
 
 
@@ -163,8 +168,10 @@ def action(path, body):
             labtest.record(result)
         result["history"] = labtest.history()[-40:]
         return result
-    if path == "/topology":
-        return {"svg": diagram.svg(), "plan": floorplan.svg()}
+    if path == "/graph":
+        return graph()
+    if path == "/fail":
+        return fail(body.get("device", ""))
     if path == "/add-room":
         report = pktbuild.add_room(body.get("room", ""), label=body.get("label", ""))
         for module in (diagram, floorplan):        # the pictures in the README show the new room too
@@ -178,708 +185,75 @@ def action(path, body):
     return {"error": "Unknown request."}
 
 
-PAGE = r"""<!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>NetCheck</title>
-<style>
-  :root { --bg:#f5f6f8; --card:#ffffff; --ink:#18212b; --soft:#5f6c7a; --line:#dde2e8; --accent:#1f6f54; --tint:#e6f2ed;
-          --out:#0f1b24; --outink:#d9e6e1; --bad:#b4472f; --warn:#8a6100; --warnbg:#fdf3d7; --add:#7fd6a8; --del:#f09a88; }
-  @media (prefers-color-scheme: dark) {
-    :root { --bg:#11161b; --card:#1a2128; --ink:#e7edf2; --soft:#98a6b3; --line:#2b3540; --accent:#46ad88; --tint:#1d3029;
-            --out:#0a0f13; --outink:#cfe1da; --bad:#e0745c; --warn:#e8c56a; --warnbg:#332a12; }
-  }
-  * { box-sizing:border-box; }
-  body { margin:0; background:var(--bg); color:var(--ink); font:15px/1.5 -apple-system, "Segoe UI", sans-serif; }
-  header { position:sticky; top:0; z-index:5; background:var(--card); border-bottom:1px solid var(--line); }
-  .bar { max-width:1240px; margin:0 auto; padding:0 20px; display:flex; align-items:center; gap:22px; flex-wrap:wrap; }
-  .brand { font-weight:700; font-size:17px; padding:14px 0; } .brand span { color:var(--accent); }
-  nav { display:flex; gap:2px; flex:1; }
-  nav button { background:none; border:0; border-bottom:2px solid transparent; color:var(--soft); font:inherit; font-weight:500;
-               padding:16px 12px 14px; cursor:pointer; }
-  nav button:hover { color:var(--ink); } nav button.on { color:var(--ink); border-bottom-color:var(--accent); }
-  .pill { font-size:12.5px; padding:4px 10px; border-radius:99px; background:var(--tint); color:var(--accent); white-space:nowrap; }
-  .pill.warn { background:var(--warnbg); color:var(--warn); }
-  main { max-width:1240px; margin:0 auto; padding:26px 20px 60px; }
-  h1 { font-size:21px; margin:0 0 4px; } h2 { font-size:15px; margin:0 0 4px; }
-  .sub { margin:0 0 20px; color:var(--soft); }
-  h3 { font-size:12px; text-transform:uppercase; letter-spacing:.06em; color:var(--soft); margin:22px 0 8px; font-weight:600; }
-  .head { display:flex; justify-content:space-between; align-items:flex-start; gap:16px; flex-wrap:wrap; }
-  .tools { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
-  .grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(240px, 1fr)); gap:12px; }
-  .card { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:14px 16px 16px; }
-  .card p { margin:0 0 10px; color:var(--soft); font-size:13px; }
-  .device { text-align:left; font:inherit; color:inherit; cursor:pointer; transition:border-color .12s, transform .12s; }
-  .device:hover { border-color:var(--accent); transform:translateY(-1px); }
-  .device b { display:flex; justify-content:space-between; align-items:center; font-size:15px; }
-  .device small { display:block; color:var(--soft); font-size:12.5px; margin-top:2px; }
-  .dot { width:9px; height:9px; border-radius:50%; background:var(--accent); flex:none; } .dot.off { background:var(--bad); }
-  .chips { display:flex; flex-wrap:wrap; gap:4px; margin-top:8px; }
-  .chip { font-size:11.5px; padding:1px 7px; border-radius:99px; background:var(--bg); border:1px solid var(--line); color:var(--soft); }
-  label { display:block; font-size:12px; color:var(--soft); margin:10px 0 3px; }
-  input, select, textarea { width:100%; padding:8px 9px; border:1px solid var(--line); border-radius:7px; background:var(--bg);
-                            color:var(--ink); font:inherit; }
-  textarea { min-height:120px; font:13px/1.5 ui-monospace, Menlo, monospace; }
-  .row { display:flex; gap:8px; } .row > div { flex:1; min-width:0; }
-  button.go, button.ghost { margin-top:12px; padding:8px 14px; border-radius:7px; font:inherit; font-weight:600; cursor:pointer; }
-  button.go { border:1px solid var(--accent); background:var(--accent); color:#fff; }
-  button.ghost { border:1px solid var(--line); background:transparent; color:var(--ink); font-weight:500; }
-  button.ghost:hover { border-color:var(--accent); color:var(--accent); }
-  button.small { margin:0; padding:5px 10px; font-size:13px; }
-  button:disabled { opacity:.5; cursor:default; }
-  :focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
-  .two { display:grid; grid-template-columns:minmax(260px, 340px) 1fr; gap:14px; align-items:start; }
-  @media (max-width:780px) { .two { grid-template-columns:1fr !important; } }
-  .picks { display:flex; flex-wrap:wrap; gap:6px; }
-  .pick { font:inherit; font-size:13px; padding:4px 10px; border-radius:99px; border:1px solid var(--line); background:var(--bg);
-          color:var(--ink); cursor:pointer; }
-  .pick.on { background:var(--accent); border-color:var(--accent); color:#fff; }
-  .steps { display:flex; gap:8px; flex-wrap:wrap; margin-top:4px; }
-  .msg { margin:14px 0 0; padding:10px 12px; border-radius:8px; border:1px solid var(--line); background:var(--card); font-size:14px; }
-  .msg.bad { border-color:var(--bad); color:var(--bad); } .msg.good { border-color:var(--accent); }
-  .result { margin-top:12px; } .result .head { align-items:center; margin-bottom:6px; }
-  .pair { display:grid; grid-template-columns:1fr 1fr; gap:8px; } @media (max-width:780px) { .pair { grid-template-columns:1fr; } }
-  .pair > div { min-width:0; }
-  .pair h4 { margin:0 0 4px; font-size:12px; color:var(--soft); font-weight:500; }
-  pre { margin:0; background:var(--out); color:var(--outink); border-radius:8px; padding:12px 14px; max-height:420px; overflow:auto;
-        font:13px/1.5 ui-monospace, Menlo, monospace; white-space:pre; }
-  pre .add { color:var(--add); } pre .del { color:var(--del); } pre .at { opacity:.5; } pre mark { background:#d9a400; color:#000; }
-  table { width:100%; border-collapse:collapse; font-size:14px; }
-  th { text-align:left; font-size:12px; color:var(--soft); font-weight:500; padding:6px 10px; border-bottom:1px solid var(--line); }
-  td { padding:8px 10px; border-bottom:1px solid var(--line); vertical-align:top; } tr:last-child td { border-bottom:0; }
-  td.soft { color:var(--soft); white-space:nowrap; }
-  .empty { color:var(--soft); padding:18px 0; }
-  #sheet { position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:10; display:flex; justify-content:flex-end; }
-  #sheet[hidden] { display:none; }
-  #sheet .panel { width:min(760px, 100%); height:100%; background:var(--card); padding:18px 20px; display:flex; flex-direction:column; gap:10px; }
-  #sheet pre { flex:1; max-height:none; }
-  #toast { position:fixed; left:50%; bottom:24px; transform:translateX(-50%); background:var(--ink); color:var(--bg); padding:10px 16px;
-           border-radius:8px; font-size:14px; max-width:90vw; z-index:20; }
-  #toast[hidden] { display:none; }
-  .hero { display:grid; grid-template-columns:minmax(250px, 300px) 1fr; gap:14px; margin-bottom:14px; }
-  @media (max-width:780px) { .hero { grid-template-columns:1fr; } }
-  .score { display:flex; align-items:center; gap:16px; }
-  .ring { width:96px; height:96px; flex:none; } .ring text { font-size:26px; font-weight:700; fill:var(--ink); }
-  .ring .track { stroke:var(--line); } .ring .value { stroke:var(--accent); transition:stroke-dashoffset .6s; } .ring.low .value { stroke:var(--bad); }
-  .tiles { display:grid; grid-template-columns:repeat(auto-fit, minmax(120px, 1fr)); gap:10px; }
-  .tile { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:12px 14px; }
-  .tile b { display:block; font-size:24px; line-height:1.2; } .tile span { color:var(--soft); font-size:12.5px; }
-  #topology { background:#fff; border-radius:8px; overflow:auto; } #topology svg { display:block; min-width:900px; width:100%; height:auto; }
-  #topology .node { cursor:pointer; } #topology .node:hover rect { stroke:#1f6f54; stroke-width:2.6; fill:#e6f2ed; }
-  .test { display:grid; grid-template-columns:22px 1fr 150px 130px; gap:12px; align-items:center; padding:9px 0; border-bottom:1px solid var(--line); }
-  .test:last-child { border-bottom:0; } @media (max-width:780px) { .test { grid-template-columns:22px 1fr; } }
-  .mark { width:20px; height:20px; border-radius:50%; background:var(--accent); color:#fff; font-size:12px; font-weight:700; display:grid; place-items:center; }
-  .mark.bad { background:var(--bad); }
-  .meter { height:8px; border-radius:99px; background:var(--line); overflow:hidden; } .meter i { display:block; height:100%; background:var(--accent); border-radius:99px; }
-  .meter.bad i { background:var(--bad); }
-  .number { text-align:right; font-variant-numeric:tabular-nums; font-size:13.5px; } .number small { color:var(--soft); }
-  .why { grid-column:2 / -1; margin:0; padding:8px 10px; border-radius:7px; background:var(--bg); color:var(--bad); font:12.5px/1.5 ui-monospace, Menlo, monospace;
-         white-space:pre-wrap; }
-  .spark { width:100%; height:70px; display:block; } .spark polyline { fill:none; stroke:var(--accent); stroke-width:2; } .spark circle { fill:var(--accent); }
-  .card + .card.stack, .stack { margin-top:14px; }
-</style>
-</head>
-<body>
-<header><div class="bar">
-  <div class="brand">Net<span>Check</span></div>
-  <nav id="tabs"></nav>
-  <span class="pill" id="status">Reading the lab...</span>
-</div></header>
+def graph():
+    """What the page needs to draw the topology and the building: the layers, the access
+    switches with what is plugged into them, the cables between routers and switches, the
+    VLANs and the wings. All of it is read from the lab file, plan.csv and inventory.csv."""
+    p = labtest.Picture()
+    labels = pktlayout.room_labels()
+    order = [room[1] for room in pktlayout.rooms()]
+    access = []
+    for switch in sorted(p.access, key=lambda name: order.index(name) if name in order else len(order)):
+        ports = p.ports(switch)
+        counts, uplinks = {}, []
+        for port, (other, other_port) in sorted(p.cabled(switch).items()):
+            if other in p.hosts:
+                vlan = labtest.value_after(ports.get(port, []), "switchport access vlan ") or "?"
+                counts[vlan] = counts.get(vlan, 0) + 1
+            elif other not in uplinks:
+                uplinks.append(other)
+        kind = "office" if switch == "SW-OFFICE" else "mdf" if switch == "SW-MDF" else "room"
+        room = switch[3:]
+        label = {"office": "Main office", "mdf": "Server room, IT"}.get(kind) or labels.get(room) or f"floor {room[1]}"
+        access.append({"name": switch, "kind": kind, "room": room, "label": label, "named": labels.get(room, ""),
+                       "wing": room[0] if kind == "room" else "", "floor": room[1] if kind == "room" else "1",
+                       "counts": counts, "uplinks": sorted(uplinks)})
 
-<main>
-  <section id="overview" hidden>
-    <div class="head">
-      <div><h1>Overview</h1><p class="sub" id="over-sub">The lab at a glance.</p></div>
-      <div class="tools">
-        <button class="ghost small" onclick="loadOverview(true)">Refresh</button>
-        <button class="ghost small" onclick="addRoom()">Add a room</button>
-        <button class="small go" style="margin:0" onclick="openLab()">Open in Packet Tracer</button>
-      </div>
-    </div>
-    <div class="hero">
-      <div class="card score">
-        <svg class="ring" id="ring" viewBox="0 0 100 100"><circle class="track" cx="50" cy="50" r="42" fill="none" stroke-width="9"/>
-          <circle class="value" id="ring-value" cx="50" cy="50" r="42" fill="none" stroke-width="9" stroke-linecap="round" stroke-dasharray="264" stroke-dashoffset="264" transform="rotate(-90 50 50)"/>
-          <text id="ring-text" x="50" y="59" text-anchor="middle">-</text></svg>
-        <div><h2>Health score</h2><p id="over-score" style="margin:0">Running the tests...</p>
-          <button class="ghost small" style="margin-top:8px" onclick="show('monitor')">See every test</button></div>
-      </div>
-      <div class="tiles" id="tiles"></div>
-    </div>
-    <div class="card">
-      <div class="head" style="align-items:center"><div><h2 id="view-title">Topology</h2><p id="view-sub">Drawn from the cables inside the lab file. Click a router or switch to read its config.</p></div>
-        <div class="picks"><button class="pick on" id="view-topology" onclick="showView('topology')">Topology</button><button class="pick" id="view-plan" onclick="showView('plan')">Building</button></div></div>
-      <div id="topology"><p class="empty" style="padding:18px">Drawing...</p></div>
-    </div>
-  </section>
+    layers = [{"title": title.split("\n")[0], "note": title.partition("\n")[2], "names": names}
+              for title, y, names in diagram.ROWS]
+    drawn = {name for layer in layers for name in layer["names"]} | set(p.access)
+    pairs = {}
+    for a, a_port, b, b_port in p.links:
+        if a in drawn and b in drawn:
+            pairs[tuple(sorted((a, b)))] = pairs.get(tuple(sorted((a, b))), 0) + 1
+    wings = pktlayout.wings()
+    spans = [{"wing": wing, "rooms": [a["room"] for a in access if a["wing"] == wing]} for wing in wings]
+    vlans = [{"vlan": row["vlan"], "name": row["name"], "network": row["network"], "gateway": row["gateway"]}
+             for row in labtest.read_csv("plan.csv") if row["vlan"] and row["gateway"]]
+    return {"layers": layers, "access": access, "wings": wings, "spans": spans, "vlans": vlans,
+            "links": [{"a": a, "b": b, "count": count} for (a, b), count in sorted(pairs.items())]}
 
-  <section id="lab" hidden>
-    <div class="head">
-      <div><h1>Lab</h1><p class="sub" id="lab-sub">The routers and switches inside the Packet Tracer file. Click one to read its config.</p></div>
-      <div class="tools">
-        <input id="lab-filter" placeholder="Filter devices or VLANs" style="width:210px" oninput="drawLab()">
-        <button class="ghost small" onclick="loadLab(true)">Refresh</button>
-        <button class="ghost small" onclick="addRoom()">Add a room</button>
-        <button class="ghost small" onclick="arrange()">Tidy the canvas</button>
-        <button class="small" onclick="openLab()">Open in Packet Tracer</button>
-      </div>
-    </div>
-    <div id="lab-body"><p class="empty">Reading the lab file...</p></div>
-  </section>
 
-  <section id="configure" hidden>
-    <h1>Configure</h1>
-    <p class="sub">Pick devices, pick a change, look at what it does, then write it into the lab.</p>
-    <div class="two">
-      <div class="card">
-        <h2>1. Devices</h2>
-        <p id="count">0 chosen</p>
-        <div class="picks" id="presets"></div>
-        <div id="devices"></div>
-      </div>
-      <div class="card">
-        <h2>2. Change</h2>
-        <p id="help"></p>
-        <label for="change">What to configure</label>
-        <select id="change" onchange="drawFields()"></select>
-        <div id="fields"></div>
-        <div class="steps">
-          <button class="go" onclick="send('/preview')">Preview</button>
-          <button class="go" onclick="send('/apply')">Write to the lab</button>
-          <button class="ghost" onclick="send('/save')">Save scripts only</button>
-        </div>
-      </div>
-    </div>
-    <div id="result"></div>
-  </section>
+def fail(device):
+    """Switch one router or switch off and say who still has a path of cables to the ISP.
+    This is the same search the single failure test in labtest.py does."""
+    p = labtest.Picture()
+    if device not in p.devices or device in p.hosts:
+        raise netconfig.Problem(f"{device} is not a router or switch in the lab.")
+    alive = p.reach_isp(dead_device=device)
+    lost = sorted(host for host in p.hosts if host not in alive)
+    cut = sorted(name for name in p.configs if name not in alive and name != device)
+    if device == "ISP":
+        why = "The ISP is the internet in this lab, so everything behind it is cut off."
+    elif lost and device in p.access:
+        why = "A room switch is the one thing without a backup: only what is plugged into it is cut off, every other room keeps working."
+    elif lost:
+        why = "There is no second path around this device."
+    else:
+        why = "There is a second device of the same kind next to it, and the traffic goes through that one."
+    return {"device": device, "hosts": len(p.hosts), "lost": len(lost), "lost_names": lost[:4], "cut": cut, "why": why}
 
-  <section id="monitor" hidden>
-    <div class="head">
-      <div><h1>Monitor</h1><p class="sub" id="mon-sub">Tests that measure a number in the lab file and compare it with a target.</p></div>
-      <div class="tools">
-        <button class="ghost small" onclick="loadHealth(false, true)">Run the tests</button>
-        <button class="small go" style="margin:0" onclick="loadHealth(true, true)">Run and record</button>
-      </div>
-    </div>
-    <div class="two" style="grid-template-columns:1fr minmax(260px, 340px)">
-      <div id="tests"><p class="empty">Running the tests...</p></div>
-      <div>
-        <div class="card"><h2>Score over time</h2><p>One point for every recorded run. Record a run after each change to see when something broke.</p>
-          <div id="trend"></div></div>
-        <div class="card stack"><h2>What is not tested here</h2><p style="margin:0">These tests read the lab file. Pings, DHCP leases and failover times only exist while Packet Tracer runs, so those are the tests in the README table.</p></div>
-      </div>
-    </div>
-  </section>
 
-  <section id="checks" hidden>
-    <h1>Checks</h1>
-    <p class="sub">Subnets, the addressing plan, the inventory and the saved configs.</p>
-    <div class="grid" style="grid-template-columns:repeat(auto-fit, minmax(300px, 1fr))">
-      <div class="card">
-        <h2>Subnet calculator</h2>
-        <p>Mask, wildcard, first and last host for any subnet.</p>
-        <label for="subnet">Subnet (address/prefix)</label>
-        <input id="subnet" value="10.10.8.0/22" onkeydown="if (event.key === 'Enter') run('subnet', {subnet: val('subnet')})">
-        <button class="go" onclick="run('subnet', {subnet: val('subnet')})">Calculate</button>
-      </div>
-      <div class="card">
-        <h2>Addressing plan</h2>
-        <p>Reads plan.csv. Finds bad subnets, bad gateways and overlaps.</p>
-        <button class="go" onclick="run('plan', {})">Check plan</button>
-      </div>
-      <div class="card">
-        <h2>Inventory</h2>
-        <p>Reads inventory.csv. Finds duplicate names, duplicate IPs and addresses in the wrong subnet.</p>
-        <button class="go" onclick="run('inventory', {})">Check inventory</button>
-      </div>
-      <div class="card">
-        <h2>Compare two configs</h2>
-        <p>Lines with - are only in the first device, lines with + only in the second.</p>
-        <div class="row">
-          <div><label for="a">First device</label><select id="a"></select></div>
-          <div><label for="b">Second device</label><select id="b"></select></div>
-        </div>
-        <button class="go" onclick="run('compare', {a: val('a'), b: val('b')})">Compare</button>
-      </div>
-      <div class="card">
-        <h2>New room switch</h2>
-        <p>Makes a config for a new classroom switch, ready to paste into the CLI.</p>
-        <div class="row">
-          <div><label for="room">Room</label><input id="room" value="E231"></div>
-          <div><label for="students">Student PCs</label><input id="students" value="15"></div>
-        </div>
-        <label for="ip">Management IP (in 10.10.99.0/24)</label>
-        <input id="ip" value="10.10.99.17">
-        <button class="go" onclick="run('template', {room: val('room'), ip: val('ip'), students: val('students')})">Generate</button>
-      </div>
-    </div>
-    <div class="result">
-      <div class="head"><h2>Output</h2><button class="ghost small" onclick="copyText(document.getElementById('out').textContent, this)">Copy</button></div>
-      <pre id="out">Press a button above.</pre>
-    </div>
-  </section>
-
-  <section id="history" hidden>
-    <h1>History</h1>
-    <p class="sub">Every change made with this tool, and the copies of the lab kept before each one.</p>
-    <div class="two" style="grid-template-columns:1fr minmax(260px, 340px)">
-      <div class="card"><h2>Changes</h2><div id="log"></div></div>
-      <div class="card"><h2>Go back</h2><p>Restoring puts the lab and the configs folder back the way they were. The lab as it is now is kept first, so you can undo a restore too.</p><div id="backups"></div></div>
-    </div>
-  </section>
-</main>
-
-<div id="sheet" hidden onclick="if (event.target === this) closeSheet()">
-  <div class="panel">
-    <div class="head" style="align-items:center">
-      <h1 id="sheet-title"></h1>
-      <div class="tools">
-        <input id="sheet-find" placeholder="Find in config" style="width:180px" oninput="drawSheet()">
-        <button class="ghost small" onclick="copyText(SHEET, this)">Copy</button>
-        <button class="ghost small" onclick="configureThis()">Configure this device</button>
-        <button class="ghost small" onclick="closeSheet()">Close</button>
-      </div>
-    </div>
-    <span class="sub" id="sheet-sub" style="margin:0"></span>
-    <pre id="sheet-text"></pre>
-  </div>
-</div>
-<div id="toast" hidden></div>
-
-<script>
-  const NL = String.fromCharCode(10);
-  const TABS = [['overview', 'Overview'], ['lab', 'Lab'], ['configure', 'Configure'], ['monitor', 'Monitor'], ['checks', 'Checks'], ['history', 'History']];
-  const LAYERS = [['edge', 'Edge routers'], ['core', 'Core switches'], ['dist', 'Distribution switches'], ['room', 'Room switches'],
-                  ['access', 'Office and MDF'], ['outside', 'Outside the school']];
-  let DATA = null, LAB = null, HEALTH = null, VIEWS = null, VIEW = 'topology', SHEET = '', SHEET_NAME = '';
-
-  function val(id) { return document.getElementById(id).value; }
-  function el(tag, text, cls) { const e = document.createElement(tag); if (text) e.textContent = text; if (cls) e.className = cls; return e; }
-  function clear(id) { const e = document.getElementById(id); e.textContent = ''; return e; }
-
-  async function ask(path, body) {
-    try {
-      return await (await fetch(path, {method: 'POST', body: JSON.stringify(body || {})})).json();
-    } catch (e) {
-      return {error: 'The program is not running any more. Start netcheck_ui.py again.'};
-    }
-  }
-
-  function toast(text) {
-    const t = document.getElementById('toast');
-    t.textContent = text; t.hidden = false;
-    clearTimeout(toast.timer); toast.timer = setTimeout(() => { t.hidden = true; }, 6000);
-  }
-
-  function copyText(text, button) {
-    navigator.clipboard.writeText(text);
-    const old = button.textContent; button.textContent = 'Copied';
-    setTimeout(() => { button.textContent = old; }, 1200);
-  }
-
-  // text with + and - lines in colour
-  function diffBlock(text) {
-    const pre = el('pre');
-    for (const line of text.split(NL)) {
-      const cls = line.startsWith('+') ? 'add' : line.startsWith('-') ? 'del' : line.startsWith('@@') ? 'at' : '';
-      pre.appendChild(el('span', line + NL, cls));
-    }
-    return pre;
-  }
-
-  function show(name) {
-    for (const [id] of TABS) {
-      document.getElementById(id).hidden = id !== name;
-      document.getElementById('tab-' + id).className = id === name ? 'on' : '';
-    }
-    location.hash = name;
-    if (name === 'history') loadHistory();
-    if (name === 'monitor' && !HEALTH) loadHealth(false);
-  }
-
-  // ---- Lab tab
-  async function loadLab(say) {
-    const reply = await ask('/lab');
-    const status = document.getElementById('status');
-    if (reply.error) {
-      clear('lab-body').appendChild(el('div', reply.error, 'msg bad'));
-      status.textContent = 'Lab file problem'; status.className = 'pill warn';
-      return;
-    }
-    LAB = reply;
-    const different = LAB.devices.filter(d => d.same_as_file === false).length;
-    if (LAB.packet_tracer_open) { status.textContent = 'Packet Tracer is open - close the lab before writing'; status.className = 'pill warn'; }
-    else if (different) { status.textContent = different + ' config(s) differ from the configs folder'; status.className = 'pill warn'; }
-    else { status.textContent = LAB.devices.length + ' devices, lab and configs folder match'; status.className = 'pill'; }
-    document.getElementById('lab-sub').textContent = 'The routers and switches inside ' + LAB.file + '. Click one to read its config.';
-    drawLab();
-    if (say) toast('Lab file read again.');
-  }
-
-  function drawLab() {
-    if (!LAB) return;
-    const body = clear('lab-body');
-    const want = val('lab-filter').trim().toLowerCase();
-    let shown = 0;
-    for (const [id, title] of LAYERS) {
-      const devices = LAB.devices.filter(d => d.group === id).filter(d => !want ||
-        (d.name + ' ' + d.location + ' ' + d.type + ' ' + d.ip + ' ' + Object.entries(d.vlans).map(v => 'vlan ' + v[0] + ' ' + v[1]).join(' '))
-          .toLowerCase().includes(want));
-      if (!devices.length) continue;
-      shown += devices.length;
-      body.appendChild(el('h3', title));
-      const grid = el('div', '', 'grid');
-      for (const d of devices) {
-        const card = el('button', '', 'card device');
-        const top = el('b', d.name);
-        const dot = el('span', '', 'dot' + (d.same_as_file === false ? ' off' : ''));
-        dot.title = d.same_as_file === false ? 'Differs from the file in the configs folder' : 'Same as the file in the configs folder';
-        top.appendChild(dot);
-        card.appendChild(top);
-        card.appendChild(el('small', [d.type, d.location, d.ip].filter(Boolean).join(' · ') || 'not in the inventory'));
-        card.appendChild(el('small', d.lines + ' config lines'));
-        const chips = el('div', '', 'chips');
-        for (const [number, name] of Object.entries(d.vlans)) chips.appendChild(el('span', number + ' ' + name, 'chip'));
-        if (chips.children.length) card.appendChild(chips);
-        card.onclick = () => openSheet(d);
-        grid.appendChild(card);
-      }
-      body.appendChild(grid);
-    }
-    if (!shown) body.appendChild(el('p', 'Nothing matches the filter.', 'empty'));
-  }
-
-  async function openSheet(d) {
-    const reply = await ask('/config', {device: d.name});
-    if (reply.error) { toast(reply.error); return; }
-    SHEET = reply.text; SHEET_NAME = d.name;
-    document.getElementById('sheet-title').textContent = d.name;
-    document.getElementById('sheet-sub').textContent = 'Running config as stored in the lab file, ' + d.lines + ' lines.';
-    document.getElementById('sheet-find').value = '';
-    drawSheet();
-    document.getElementById('sheet').hidden = false;
-  }
-
-  function drawSheet() {
-    const pre = clear('sheet-text');
-    const want = val('sheet-find').toLowerCase();
-    let first = null;
-    for (const line of SHEET.split(NL)) {
-      const at = want ? line.toLowerCase().indexOf(want) : -1;
-      if (at < 0) { pre.appendChild(document.createTextNode(line + NL)); continue; }
-      pre.appendChild(document.createTextNode(line.slice(0, at)));
-      const mark = el('mark', line.slice(at, at + want.length));
-      first = first || mark;
-      pre.appendChild(mark);
-      pre.appendChild(document.createTextNode(line.slice(at + want.length) + NL));
-    }
-    if (first) first.scrollIntoView({block: 'center'});
-  }
-
-  function closeSheet() { document.getElementById('sheet').hidden = true; }
-
-  function configureThis() {
-    closeSheet();
-    for (const b of document.querySelectorAll('#devices .pick')) b.classList.toggle('on', b.dataset.name === SHEET_NAME);
-    countDevices();
-    show('configure');
-  }
-
-  async function arrange() {
-    if (!confirm('Put every device back on the grid and rewrite the boxes and notes on the canvas?' + NL + NL +
-                 'Close the lab in Packet Tracer first. Device configs are not touched.')) return;
-    const reply = await ask('/layout');
-    toast(reply.error || reply.message);
-  }
-
-  async function openLab() {
-    const reply = await ask('/open');
-    toast(reply.error || reply.message);
-  }
-
-  async function addRoom() {
-    const room = prompt('Room number of the new classroom: wing letter, floor, two digits. E231 is wing E, floor 2.' + NL + NL +
-                        'It gets a 2960 switch, 15 student PCs, a teacher PC and two uplinks, copied from the last room. ' +
-                        'Close the lab in Packet Tracer first.');
-    if (!room) return;
-    const label = prompt('A name for the room, like Library or Art room. Leave empty for a normal classroom.') || '';
-    toast('Adding room ' + room.toUpperCase() + '...');
-    const reply = await ask('/add-room', {room: room, label: label});
-    toast(reply.error || reply.message);
-    if (!reply.error) { DATA = await (await fetch('/data')).json(); loadLab(); loadOverview(); }
-  }
-
-  // ---- Overview and Monitor tabs
-  function svgEl(tag, attrs) {
-    const e = document.createElementNS('http://www.w3.org/2000/svg', tag);
-    for (const k in attrs) e.setAttribute(k, attrs[k]);
-    return e;
-  }
-
-  async function loadOverview(say) {
-    loadHealth(false);
-    const reply = await ask('/topology');
-    const box = clear('topology');
-    if (reply.error) { box.appendChild(el('div', reply.error, 'msg bad')); return; }
-    VIEWS = reply;
-    showView(VIEW);
-    if (say) toast('Overview read again.');
-  }
-
-  function showView(name) {
-    VIEW = name;
-    document.getElementById('view-topology').classList.toggle('on', name === 'topology');
-    document.getElementById('view-plan').classList.toggle('on', name === 'plan');
-    document.getElementById('view-title').textContent = name === 'plan' ? 'Building' : 'Topology';
-    document.getElementById('view-sub').textContent = name === 'plan'
-      ? 'A made up sketch of the school with the rooms of the lab, their switches and the cable runs to the server room.'
-      : 'Drawn from the cables inside the lab file. Click a router or switch to read its config.';
-    if (!VIEWS) return;
-    const box = clear('topology');
-    const picture = new DOMParser().parseFromString(name === 'plan' ? VIEWS.plan : VIEWS.svg, 'image/svg+xml').documentElement;
-    box.appendChild(document.importNode(picture, true));
-    for (const node of box.querySelectorAll('.node')) {
-      node.addEventListener('click', () => {
-        const d = LAB && LAB.devices.find(d => d.name === node.dataset.name);
-        if (d) openSheet(d); else toast(node.dataset.name + ' is a server, it has no IOS config.');
-      });
-    }
-  }
-
-  async function loadHealth(record, say) {
-    const reply = await ask('/health', {record: record});
-    if (reply.error) {
-      clear('tests').appendChild(el('div', reply.error, 'msg bad'));
-      document.getElementById('over-score').textContent = reply.error;
-      return;
-    }
-    HEALTH = reply;
-    // the ring and the tiles on the Overview
-    document.getElementById('ring-text').textContent = reply.score;
-    document.getElementById('ring-value').setAttribute('stroke-dashoffset', 264 - 264 * reply.score / 100);
-    document.getElementById('ring').setAttribute('class', 'ring' + (reply.score < 100 ? ' low' : ''));
-    const failed = reply.tests.filter(t => !t.passed);
-    document.getElementById('over-score').textContent = reply.passed + ' of ' + reply.total + ' tests pass' +
-      (failed.length ? '. Failing: ' + failed.map(t => t.title).join('; ') : ', nothing to fix.');
-    const tiles = clear('tiles');
-    const rooms = DATA ? DATA.devices.filter(d => d.group === 'room').length : 0;
-    for (const [number, label] of [[reply.counts.devices, 'devices in the lab'], [reply.counts['network devices'], 'routers and switches'],
-        [reply.counts.hosts, 'PCs and servers'], [rooms, 'classrooms'], [reply.counts.cables, 'cables'],
-        [reply.counts['failures tried'], 'single failures survived']]) {
-      const tile = el('div', '', 'tile'); tile.appendChild(el('b', String(number))); tile.appendChild(el('span', label)); tiles.appendChild(tile);
-    }
-    document.getElementById('over-sub').textContent = 'The lab at a glance. Tests last run ' + reply.time + '.';
-
-    // the list on the Monitor tab
-    const box = clear('tests');
-    let group = null, card = null;
-    for (const t of reply.tests) {
-      if (t.group !== group) { group = t.group; card = el('div', '', 'card' + (box.children.length ? ' stack' : '')); card.appendChild(el('h2', group)); box.appendChild(card); }
-      const row = el('div', '', 'test');
-      row.appendChild(el('span', t.passed ? String.fromCharCode(10003) : '!', 'mark' + (t.passed ? '' : ' bad')));
-      row.appendChild(el('span', t.title));
-      const meter = el('div', '', 'meter' + (t.passed ? '' : ' bad'));
-      const fill = el('i'); fill.style.width = Math.min(100, t.lower_is_better ? t.measured : 100 * t.measured / (t.target || 1)) + '%';
-      meter.appendChild(fill); row.appendChild(meter);
-      const number = el('span', '', 'number');
-      number.appendChild(el('b', String(t.measured)));
-      number.appendChild(el('small', (t.lower_is_better ? ' ' + t.unit + ', limit ' + t.target : ' of ' + t.target + ' ' + t.unit)));
-      row.appendChild(number);
-      if (t.detail.length) row.appendChild(el('pre', t.detail.join(NL), 'why'));
-      card.appendChild(row);
-    }
-    document.getElementById('mon-sub').textContent = reply.passed + ' of ' + reply.total + ' tests pass, score ' + reply.score +
-      '%. Each test measures a number in the lab file and compares it with a target.';
-    drawTrend(reply.history);
-    if (say) toast(record ? 'Tests run and recorded.' : 'Tests run.');
-  }
-
-  function drawTrend(rows) {
-    const box = clear('trend');
-    if (!rows.length) { box.appendChild(el('p', 'Nothing recorded yet. Press Run and record.', 'empty')); return; }
-    const svg = svgEl('svg', {class: 'spark', viewBox: '0 0 300 70', preserveAspectRatio: 'none'});
-    const points = rows.map((r, i) => [rows.length === 1 ? 150 : 6 + 288 * i / (rows.length - 1), 64 - 58 * Number(r.score) / 100]);
-    svg.appendChild(svgEl('polyline', {points: points.map(p => p.join(',')).join(' ')}));
-    for (const [x, y] of points) svg.appendChild(svgEl('circle', {cx: x, cy: y, r: 2.5}));
-    box.appendChild(svg);
-    const table = el('table');
-    for (const r of rows.slice(-6).reverse()) {
-      const tr = el('tr');
-      tr.appendChild(el('td', r.time, 'soft')); tr.appendChild(el('td', r.score + '%'));
-      tr.appendChild(el('td', r.passed + '/' + r.total + ' tests, ' + r.devices + ' devices', 'soft'));
-      table.appendChild(tr);
-    }
-    box.appendChild(table);
-  }
-
-  // ---- Configure tab
-  async function start() {
-    const tabs = document.getElementById('tabs');
-    for (const [id, title] of TABS) {
-      const b = el('button', title); b.id = 'tab-' + id; b.onclick = () => show(id); tabs.appendChild(b);
-    }
-    DATA = await (await fetch('/data')).json();
-
-    const presets = [['all', 'All'], ['switches', 'All switches'], ['allaccess', 'All access switches']]
-      .concat(DATA.groups.map(g => [g[0], g[1]])).concat([['none', 'None']]);
-    for (const [id, title] of presets) {
-      const b = el('button', title, 'pick'); b.onclick = () => pickGroup(id);
-      document.getElementById('presets').appendChild(b);
-    }
-    const box = document.getElementById('devices');
-    for (const [id, title] of DATA.groups) {
-      box.appendChild(el('h3', title));
-      const picks = el('div', '', 'picks');
-      for (const d of DATA.devices.filter(d => d.group === id)) {
-        const b = el('button', d.name, 'pick');
-        b.dataset.name = d.name; b.dataset.group = d.group; b.title = d.type + ', ' + d.location;
-        b.onclick = () => { b.classList.toggle('on'); countDevices(); };
-        picks.appendChild(b);
-      }
-      box.appendChild(picks);
-    }
-    const change = document.getElementById('change');
-    for (const c of DATA.changes) { const o = el('option', c.title); o.value = c.id; change.appendChild(o); }
-    for (const [id, chosen] of [['a', 'SW-E230'], ['b', 'SW-E110']]) {
-      for (const name of DATA.configs) { const o = el('option', name); o.selected = name === chosen; document.getElementById(id).appendChild(o); }
-    }
-    drawFields();
-    countDevices();
-    const wanted = location.hash.slice(1);
-    show(TABS.some(t => t[0] === wanted) ? wanted : 'overview');
-    loadLab();
-    loadOverview();
-  }
-
-  function pickGroup(g) {
-    for (const b of document.querySelectorAll('#devices .pick')) {
-      const dg = b.dataset.group;
-      b.classList.toggle('on', g === 'all' || (g === 'switches' && dg !== 'edge') ||
-                               (g === 'allaccess' && (dg === 'room' || dg === 'access')) || g === dg);
-    }
-    countDevices();
-  }
-
-  function chosenDevices() { return Array.from(document.querySelectorAll('#devices .pick.on')).map(b => b.dataset.name); }
-  function countDevices() { document.getElementById('count').textContent = chosenDevices().length + ' chosen. Click a group or single devices.'; }
-
-  function drawFields() {
-    const c = DATA.changes.find(c => c.id === val('change'));
-    document.getElementById('help').textContent = c.help;
-    const box = clear('fields');
-    for (const f of c.fields) {
-      const label = el('label', f.label); label.htmlFor = 'f-' + f.key;
-      let input;
-      if (f.choices) { input = el('select'); for (const choice of f.choices) input.appendChild(el('option', choice)); }
-      else if (f.big) input = el('textarea');
-      else input = el('input');
-      input.id = 'f-' + f.key; input.value = f.default; input.dataset.key = f.key;
-      box.appendChild(label); box.appendChild(input);
-    }
-  }
-
-  async function send(path) {
-    if (path === '/apply' && !confirm('Write this change into the Packet Tracer lab file?' + NL + NL +
-        'Close the lab in Packet Tracer first. A copy of the file is kept, see the History tab.')) return;
-    const values = {};
-    for (const input of document.querySelectorAll('#fields [data-key]')) values[input.dataset.key] = input.value;
-    const result = clear('result');
-    const reply = await ask(path, {devices: chosenDevices(), change: val('change'), values: values});
-    if (reply.error) { result.appendChild(el('div', reply.error, 'msg bad')); return; }
-
-    const names = Object.keys(reply.scripts);
-    let text = reply.title + ': ' + names.length + ' device(s). ';
-    if (reply.written) text += 'Written into the lab file and the configs folder. Open the lab in Packet Tracer to see it.';
-    else if (reply.folder) text += 'Scripts saved in changes/' + reply.folder + '. The lab was not changed.';
-    else text += 'This is a preview, nothing was changed. On the right is what each config in the lab would get.';
-    result.appendChild(el('div', text, 'msg' + (reply.written ? ' good' : '')));
-    for (const note of reply.notes) result.appendChild(el('div', note, 'msg'));
-
-    for (const name of names) {
-      const part = el('div', '', 'card result');
-      const head = el('div', '', 'head');
-      head.appendChild(el('h2', name));
-      const copy = el('button', 'Copy script', 'ghost small');
-      copy.onclick = () => copyText(reply.scripts[name], copy);
-      head.appendChild(copy);
-      part.appendChild(head);
-      const pair = el('div', '', 'pair');
-      const left = el('div'); left.appendChild(el('h4', 'Commands')); left.appendChild(el('pre', reply.scripts[name]));
-      const right = el('div'); right.appendChild(el('h4', reply.written ? 'What changed in the lab' : 'What would change in the lab'));
-      right.appendChild(diffBlock(reply.changes[name] || ''));
-      pair.appendChild(left); pair.appendChild(right);
-      part.appendChild(pair);
-      result.appendChild(part);
-    }
-    result.scrollIntoView({behavior: 'smooth', block: 'nearest'});
-    if (reply.written) { toast('Written to the lab.'); loadLab(); loadOverview(); }
-  }
-
-  // ---- Checks tab
-  async function run(command, values) {
-    document.getElementById('out').textContent = 'Working...';
-    let text;
-    try {
-      text = await (await fetch('/run', {method: 'POST', body: JSON.stringify({command: command, values: values})})).text();
-    } catch (e) {
-      text = 'The program is not running any more. Start netcheck_ui.py again.';
-    }
-    const fresh = command === 'compare' ? diffBlock(text) : el('pre', text);
-    fresh.id = 'out';
-    document.getElementById('out').replaceWith(fresh);
-    fresh.scrollIntoView({behavior: 'smooth', block: 'nearest'});
-  }
-
-  // ---- History tab
-  async function loadHistory() {
-    const reply = await ask('/history');
-    const log = clear('log'), backups = clear('backups');
-    if (reply.error) { log.appendChild(el('div', reply.error, 'msg bad')); return; }
-    if (!reply.changes.length) log.appendChild(el('p', 'No changes yet. Make one on the Configure tab.', 'empty'));
-    else {
-      const table = el('table');
-      const head = el('tr'); for (const h of ['When', 'Change', 'Devices', 'In lab']) head.appendChild(el('th', h));
-      table.appendChild(head);
-      for (const row of reply.changes) {
-        const tr = el('tr');
-        tr.appendChild(el('td', row.time, 'soft'));
-        tr.appendChild(el('td', row.change));
-        const devices = (row.devices || '').split(' ');
-        tr.appendChild(el('td', devices.length > 3 ? devices.length + ' devices' : devices.join(', '), 'soft'));
-        tr.appendChild(el('td', row['written to lab'] === 'yes' ? 'yes' : 'scripts only', 'soft'));
-        tr.title = row.devices;
-        table.appendChild(tr);
-      }
-      log.appendChild(table);
-    }
-    if (!reply.backups.length) backups.appendChild(el('p', 'No copies yet. One is made before every change.', 'empty'));
-    else {
-      const table = el('table');
-      for (const name of reply.backups) {
-        const tr = el('tr');
-        tr.appendChild(el('td', 'Lab before ' + name.slice(0, 10) + ' ' + name.slice(11, 13) + ':' + name.slice(13, 15) + ':' + name.slice(15, 17)));
-        const cell = el('td'); cell.style.textAlign = 'right';
-        const b = el('button', 'Restore', 'ghost small');
-        b.onclick = async () => {
-          if (!confirm('Put the lab back to how it was before this change?' + NL + NL + 'Close the lab in Packet Tracer first.')) return;
-          const r = await ask('/restore', {backup: name});
-          toast(r.error || r.message); loadHistory(); loadLab(); loadOverview();
-        };
-        cell.appendChild(b); tr.appendChild(cell);
-        table.appendChild(tr);
-      }
-      backups.appendChild(table);
-    }
-  }
-
-  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeSheet(); });
-  start();
-</script>
-</body>
-</html>
-"""
+def page_file(path):
+    """The text and the kind of one file of the page, or (None, None). Only files that
+    are really inside the ui folder are given out."""
+    name = path.split("?")[0].split("#")[0].lstrip("/") or "index.html"
+    full = os.path.normpath(os.path.join(UI, name))
+    kind = KINDS.get(os.path.splitext(full)[1])
+    if not full.startswith(UI + os.sep) or kind is None or not os.path.isfile(full):
+        return None, None
+    with open(full, encoding="utf-8") as f:
+        return f.read(), kind
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -887,6 +261,7 @@ class Handler(BaseHTTPRequestHandler):
         data = text.encode("utf-8")
         self.send_response(200)
         self.send_header("Content-Type", kind + "; charset=utf-8")
+        self.send_header("Cache-Control", "no-store")   # so a changed file shows up on the next reload
         self.send_header("Content-Length", str(len(data)))
         self.end_headers()
         self.wfile.write(data)
@@ -894,8 +269,12 @@ class Handler(BaseHTTPRequestHandler):
     def do_GET(self):
         if self.path == "/data":
             self.send_text(json.dumps(page_data()), "application/json")
+            return
+        text, kind = page_file(self.path)
+        if text is None:
+            self.send_error(404)
         else:
-            self.send_text(PAGE, "text/html")
+            self.send_text(text, kind)
 
     def do_POST(self):
         length = int(self.headers.get("Content-Length", 0))

@@ -84,17 +84,21 @@ interface GigabitEthernet1/0/4
  spanning-tree portfast
  spanning-tree bpduguard enable
 !
-! ---- Unused ports: put in parking VLAN 998 and shut down
 interface GigabitEthernet1/0/5
- switchport access vlan 998
+ description MDF - SRV-CAMERAS
+ switchport access vlan 70
  switchport mode access
- shutdown
+ spanning-tree portfast
+ spanning-tree bpduguard enable
 !
 interface GigabitEthernet1/0/6
- switchport access vlan 998
+ description MDF - SRV-BACKUP
+ switchport access vlan 70
  switchport mode access
- shutdown
+ spanning-tree portfast
+ spanning-tree bpduguard enable
 !
+! ---- Unused ports: put in parking VLAN 998 and shut down
 interface GigabitEthernet1/0/7
  switchport access vlan 998
  switchport mode access

@@ -16,15 +16,19 @@ OSPF move traffic to the other device when one fails.
 **Why this way.** VLANs by role (not by room) mean one set of rules for all students wherever
 they sit. Putting the gateways and ACLs on the distribution layer keeps the core simple. Two
 uplinks per room switch cost one extra cable per room and remove every single point of failure
-between a room and the internet: `tools/labtest.py` breaks all 50 backbone devices and cables
-one at a time and counts that all 204 PCs and servers still have a path out.
+between a room and the internet: `tools/labtest.py` breaks all 54 backbone devices and cables
+one at a time and counts that all 236 PCs, servers and building things still have a path out.
 
 ![Topology of the lab](topology.svg)
 
-Where it would all be in a building. The sketch is made up (it is not the real RHS floor plan),
-the coloured rooms are the ones in the lab:
+The lab is drawn as a school, not as a diagram. The canvas in Packet Tracer is this floor plan:
+walls, halls with a wiring closet for every room switch, the server room in the middle, the
+main office, the cafeteria and the gym. The building is made up (it is not the real RHS floor
+plan). A school network is not only computers, so there is also a smartboard in every
+classroom, cameras in the halls, printers, badge readers at the doors, the
+lunch registers, a vending machine and the gym scoreboard. They sit in their own VLAN.
 
-![Sketch of the building](floorplan.svg)
+![Floor plan of the school with the network in it](floorplan.svg)
 
 Other files in this folder:
 
@@ -35,12 +39,14 @@ Other files in this folder:
   - `netconfig.py` builds configuration changes for groups of devices (all access switches, both distribution switches, ...)
   - `pktconfig.py` writes those changes straight into `RHS School Network.pkt`, so nothing has to be pasted into each device
   - `pktfile.py` unpacks and packs the `.pkt` file format (used by the other two)
-  - `pktlayout.py` arranges the devices on the canvas, draws the coloured boxes and writes the text notes in the lab
-  - `pktbuild.py` adds a whole classroom (switch, 16 PCs, cables, uplinks, configs) to the lab with one command
+  - `pktlayout.py` turns the canvas into the floor plan: every device in its room, walls, halls, desks, and the text notes in the lab
+  - `pkticons.py` draws the pictures of the things Packet Tracer has no icon for (smartboard, camera, vending machine...)
+  - `pktbuild.py` adds a whole classroom (switch, 16 PCs, smartboard, cables, uplinks, configs) or one more thing (`add-thing CAM-GYM camera SW-A100 Gym`, `remove-thing` takes it out again) to the lab with one command
   - `labtest.py` runs measurable tests on the lab file (redundancy, VLANs, security, monitoring) and keeps a history of the score
   - `diagram.py` draws `topology.svg` from the cables and configs inside the lab file
-  - `floorplan.py` draws `floorplan.svg`, a made up sketch of the building with the rooms of the lab in it
-  - `netcheck_ui.py` is a simple page in the browser with buttons for all of it. Start it with `python3 tools/netcheck_ui.py`
+  - `floorplan.py` draws `floorplan.svg`, the same floor plan as on the canvas, with the cables from the lab file
+  - `netcheck_ui.py` is a page in the browser with buttons for all of it. Start it with `python3 tools/netcheck_ui.py`
+  - `ui/` is that page (React, saved in `ui/vendor` so nothing has to be installed and it works offline)
 - `screenshots/` - screenshots for this document (list is at the bottom)
 
 ## 1. Lab overview
@@ -53,8 +59,11 @@ how the district set theirs up, so the topology, subnets, VLANs and rules are my
 
 What the network has to do:
 
-- 180 student PCs (15 per room), 12 teacher PCs, 6 office PCs, 2 IT PCs, 4 servers
-- students, teachers, office staff and IT are kept apart, with rules for who can reach what
+- 180 student PCs (15 per room), 12 teacher PCs, 6 office PCs, 3 IT PCs, 6 servers,
+  a PC for the kitchen manager in the cafeteria and one for the coach in the gym
+- 27 building things: 12 smartboards, 6 cameras, 3 printers, 2 badge readers,
+  2 lunch registers, a vending machine and the gym scoreboard
+- students, teachers, office staff, IT and the building things are kept apart, with rules for who can reach what
 - every PC gets its address from one DHCP server
 - everyone reaches the internet through NAT
 - no single switch, router or cable between a room and the internet can take the school down
@@ -85,8 +94,9 @@ is drawn by `tools/diagram.py` from the lab file itself. The same thing as text:
                     |     \   /     |
                 [DIST-L3-1]=====[DIST-L3-2]      DISTRIBUTION: gateways, HSRP, ACLs, DHCP relay
                   |  |  |  |  |  |  |  |  |  |
-   SW-OFFICE     E wing (4)      C wing (4)      B wing (4)      SW-MDF          ACCESS
-    6 PCs      one 2960 per room, 16 PCs each (15 students + teacher)   4 servers, 2 IT PCs
+   SW-OFFICE     E wing (4)      C wing (4)      B wing (4)     SW-A100     SW-MDF          ACCESS
+    6 PCs      one 2960 per room: 15 students, teacher, smartboard     cafeteria   6 servers, 2 IT PCs
+    + things                                                           + gym
 ```
 
 `=====` is an EtherChannel. Every access switch has one trunk to DIST-L3-1 and one to DIST-L3-2.
@@ -96,8 +106,10 @@ is drawn by `tools/diagram.py` from the lab file itself. The same thing as text:
 | RHS-EDGE1, RHS-EDGE2 | 2911 | edge | NAT, default route to the ISP, ACL for traffic from the internet |
 | CORE-L3-1, CORE-L3-2 | 3650 | core | route between edge and distribution, nothing else |
 | DIST-L3-1, DIST-L3-2 | 3650 | distribution | default gateway of every VLAN (HSRP), ACLs between VLANs, DHCP relay, STP root |
-| SW-E103, SW-E110, SW-E203, SW-E230, SW-C114, SW-C116, SW-C214, SW-C216, SW-B126, SW-B128, SW-B226, SW-B228 | 2960 | access | one per room. Fa0/1-15 students, Fa0/16 teacher, Gi0/1 and Gi0/2 uplinks |
-| SW-OFFICE | 3650 as layer 2 | access | main office and counseling |
+| SW-E103, SW-E110, SW-E203, SW-E230, SW-C114, SW-C116, SW-C214, SW-C216, SW-B126, SW-B128, SW-B226, SW-B228 | 2960 | access | one per room. Fa0/1-15 students, Fa0/16 teacher, Fa0/17 smartboard, Gi0/1 and Gi0/2 uplinks |
+| SW-A100 | 2960 | access | cafeteria and gym: registers, vending machine, scoreboard, cameras, door reader, and two staff PCs (kitchen manager, coach) in the teacher VLAN |
+| SW-M101 | 2960 | access | the IT office next to the server room: IT-PC3 and the IT printer |
+| SW-OFFICE | 3650 as layer 2 | access | main office and counseling, the office printer and the front door |
 | SW-MDF | 3650 as layer 2 | access | servers and the IT office |
 | ISP, INET-SRV | 2911, server | outside | pretend internet |
 
@@ -121,6 +133,7 @@ the same two boxes. Splitting it up:
 | 10 | STUDENTS | 10.10.8.0/22 | 10.10.8.1 | the 180 room PCs | DIST-L3-1 |
 | 20 | TEACHERS | 10.10.20.0/24 | 10.10.20.1 | teacher PC in each room | DIST-L3-2 |
 | 30 | MANAGEMENT | 10.10.30.0/24 | 10.10.30.1 | principal, counselors, office | DIST-L3-2 |
+| 40 | BUILDING | 10.10.40.0/24 | 10.10.40.1 | smartboards, cameras, printers, door readers, registers | DIST-L3-2 |
 | 70 | SERVERS | 10.10.70.0/24 | 10.10.70.1 | servers | DIST-L3-1 |
 | 99 | NETWORK-IT | 10.10.99.0/24 | 10.10.99.1 | IT PCs and switch management | DIST-L3-1 |
 | 100 | CORE-TRANSIT | 10.10.0.8/30 | | between the two cores | |
@@ -137,8 +150,13 @@ Why:
 - **VLAN 1 is not used** for anything, and the native VLAN is an empty VLAN (999). That way
   untagged frames on a trunk end up nowhere.
 - **Unused ports are in VLAN 998 and shut down**, so plugging into a spare port does nothing.
-- **Trunks only carry what the switch needs**: room switches 10,20,99. SW-OFFICE 30,99.
-  SW-MDF 70,99. A student VLAN broadcast never reaches the office switch.
+- **Trunks only carry what the switch needs**: room switches 10,20,40,99. SW-OFFICE 30,40,99.
+  SW-A100 20,40,99. SW-M101 40,99. SW-MDF 70,99. A student VLAN broadcast never reaches the office switch.
+- **Building things get their own VLAN (40).** A camera, a smartboard or a vending machine
+  rarely gets updates and nobody logs into it, so it is the easiest thing in a school to break
+  into. In its own VLAN with a strict ACL a hacked one cannot reach a student PC, a teacher PC
+  or the internet. Packet Tracer has no such devices, so each one is a PC with its own picture
+  (drawn by `tools/pkticons.py`): it gets an address by DHCP and answers ping like the real thing.
 
 ## 4. IP addressing
 
@@ -146,22 +164,26 @@ Gateways: the HSRP address is always .1, DIST-L3-1 is .2 and DIST-L3-2 is .3 in 
 
 Servers and static hosts:
 
-    SRV-DHCP      10.10.70.5    DHCP for students, teachers and management
+    SRV-DHCP      10.10.70.5    DHCP for students, teachers, management and building things
     SRV-DNS-WEB   10.10.70.10   DNS and the school web page (www.rhs.lab)
     SRV-LOG       10.10.70.20   syslog and NTP
     SRV-FILE      10.10.70.30   FTP file server for staff (admin / RHSadmin)
+    SRV-BACKUP    10.10.70.31   second copy of the staff files
+    SRV-CAMERAS   10.10.70.40   records the security cameras
     IT-PC1        10.10.99.50
     IT-PC2        10.10.99.51
+    IT-PC3        10.10.99.52   on SW-M101
 
 DHCP scopes on SRV-DHCP (every other PC uses DHCP):
 
     STUDENTS     10.10.8.50  - 10.10.10.37    gateway 10.10.8.1    DNS 10.10.70.10
     TEACHERS     10.10.20.50 - 10.10.20.149   gateway 10.10.20.1   DNS 10.10.70.10
     MANAGEMENT   10.10.30.50 - 10.10.30.149   gateway 10.10.30.1   DNS 10.10.70.10
+    BUILDING     10.10.40.50 - 10.10.40.149   gateway 10.10.40.1   DNS 10.10.70.10
 
 Switch management (VLAN 99): room switches 10.10.99.11 to .20 and .23, .24 in the order they
 were added (E230, E110, E103, E203, C214, B126, B128, C216, C114, C116, B226, B228), the full
-list is in `tools/inventory.csv`. SW-OFFICE .21, SW-MDF .22.
+list is in `tools/inventory.csv`. SW-OFFICE .21, SW-MDF .22, SW-A100 .25, SW-M101 .26.
 
 Point to point links (all /30):
 
@@ -238,11 +260,13 @@ VLAN down one router link.
 |------|----|--------|
 | Students | internet, DNS, school web page | allow |
 | Students | teachers, management, IT, file server, other servers | deny |
-| Teachers | servers (web, files), students, internet | allow |
+| Teachers | servers (web, files), students, building things (smartboard, printer), internet | allow |
 | Teachers | management, IT | deny |
 | Management | servers, teachers, students, internet | allow |
 | Management | IT | deny |
 | Network IT | everything | allow |
+| Building things | DNS, time and logs (SRV-LOG), the camera recorder (SRV-CAMERAS), answers to staff and IT | allow |
+| Building things | students, teachers, management, IT, other servers, internet | deny |
 | Servers | may answer, may not start a connection into the school | |
 | Internet | school web server on 80/443 only | allow |
 | Anyone except IT | SSH to a router or switch | deny |
@@ -254,6 +278,7 @@ Where they are:
 | STUDENTS-IN | extended, named | `ip access-group ... in` on interface Vlan10 | both distribution switches |
 | TEACHERS-IN | extended, named | in on Vlan20 | both distribution switches |
 | MANAGEMENT-IN | extended, named | in on Vlan30 | both distribution switches |
+| BUILDING-IN | extended, named | in on Vlan40 | both distribution switches |
 | SERVERS-IN | extended, named | in on Vlan70 | both distribution switches |
 | OUTSIDE-IN | extended, named | in on the WAN port | both edge routers |
 | 10 | standard | `access-class 10 in` on the vty lines | every router and switch |
@@ -275,6 +300,8 @@ Why:
 - Students are blocked from all of 10.0.0.0/8 after the few allowed lines, then `permit ip any
   any` lets them out to the internet. It is shorter than listing each VLAN and still covers
   VLANs added later.
+- `BUILDING-IN` is the only user ACL that ends in `deny ip any any`: a camera has no reason
+  to open a web page. It names the four things a building device needs and nothing else.
 - `access-class 10` only lets the IT VLAN SSH in. Telnet is off (`transport input ssh`).
 
 The full ACLs are at the end of `configs/DIST-L3-1.txt` and `configs/RHS-EDGE1.txt`.
@@ -331,7 +358,7 @@ I have not filled in the Result column yet. It gets filled in from real output o
 |---|------|----------|--------|
 | 1 | E230-PC01 `ipconfig` | 10.10.8.50 - 10.10.10.37, gateway 10.10.8.1, DNS 10.10.70.10 | |
 | 2 | E230-TCHR `ipconfig`, PRINCIPAL-PC `ipconfig` | 10.10.20.x and 10.10.30.x | |
-| 3 | SW-E230 `show vlan brief`, `show interfaces trunk` | Fa0/1-15 in 10, Fa0/16 in 20, trunks Gi0/1 and Gi0/2 | |
+| 3 | SW-E230 `show vlan brief`, `show interfaces trunk` | Fa0/1-15 in 10, Fa0/16 in 20, Fa0/17 in 40, trunks Gi0/1 and Gi0/2 | |
 | 4 | SW-E230 `show spanning-tree vlan 10` and `vlan 20` | Gi0/1 forwarding for 10, Gi0/2 forwarding for 20 | |
 | 5 | DIST-L3-1 `show standby brief` | Active for 10, 70, 99. Standby for 20, 30 | |
 | 6 | DIST-L3-1 `show etherchannel summary` | Po1 and Po2 with (P) on the member ports | |
@@ -371,29 +398,29 @@ output for the lab as it is in this folder:
 
 ```
 Redundancy
-  PASS  Hosts that still reach the ISP after any single failure              204 of 204 hosts
-  PASS  Access switches cabled to both distribution switches                 14 of 14 switches
-  PASS  VLANs with the same HSRP gateway on both distribution switches       5 of 5 VLANs
-  PASS  VLANs where the spanning tree root is also the HSRP active switch    5 of 5 VLANs
+  PASS  Hosts that still reach the ISP after any single failure              236 of 236 hosts
+  PASS  Access switches cabled to both distribution switches                 16 of 16 switches
+  PASS  VLANs with the same HSRP gateway on both distribution switches       6 of 6 VLANs
+  PASS  VLANs where the spanning tree root is also the HSRP active switch    6 of 6 VLANs
 
 Switching
-  PASS  Trunk cables with the same allowed and native VLANs on both ends     34 of 34 trunks
-  PASS  PCs and servers plugged into a port of the right VLAN                204 of 204 hosts
-  PASS  Gateway interfaces that relay DHCP to SRV-DHCP                       6 of 6 interfaces
+  PASS  Trunk cables with the same allowed and native VLANs on both ends     38 of 38 trunks
+  PASS  PCs, servers and building things plugged into a port of the right VLAN 236 of 236 hosts
+  PASS  Gateway interfaces that relay DHCP to SRV-DHCP                       8 of 8 interfaces
   PASS  Fullest subnet (lower is better)                                     18 <= 50 % used
 
 Security
-  PASS  PC ports with port security                                          200 of 200 ports
-  PASS  Host ports with PortFast and BPDU guard                              204 of 204 ports
-  PASS  Ports without a cable that are shut down                             200 of 200 ports
-  PASS  Devices that only allow SSH version 2 for remote login               20 of 20 devices
+  PASS  PC and building thing ports with port security                       230 of 230 ports
+  PASS  Host ports with PortFast and BPDU guard                              236 of 236 ports
+  PASS  Ports without a cable that are shut down                             212 of 212 ports
+  PASS  Devices that only allow SSH version 2 for remote login               22 of 22 devices
 
 Monitoring
-  PASS  Devices that send logs to SRV-LOG, use NTP and answer SNMP           20 of 20 devices
-  PASS  Device configs in the lab that match the configs folder              21 of 21 devices
+  PASS  Devices that send logs to SRV-LOG, use NTP and answer SNMP           22 of 22 devices
+  PASS  Device configs in the lab that match the configs folder              23 of 23 devices
 
 14 of 14 tests passed, score 100%.
-Lab: 230 devices (20 routers and switches, 204 PCs and servers), 249 cables. 50 single failures tried.
+Lab: 264 devices (22 routers and switches, 236 PCs and servers), 285 cables. 54 single failures tried.
 ```
 
 `python3 labtest.py --record` adds the result to `changes/health.csv`, so there is a history of
@@ -460,6 +487,11 @@ When something does not work I go from the bottom up:
 - DHCP through the relay for three scopes, DHCP snooping and `default-information originate
   metric 100` are the parts I expect to need fixing first
 - no wireless, no guest network, no DAI
+- the building things are PCs with a picture, because Packet Tracer has no smartboard or scoreboard.
+  The pictures are saved inside the `.pkt` file. If Packet Tracer does not show them, the things
+  look like PCs and everything still works
+- the lunch registers share VLAN 40 with the cameras. A real school would give anything that
+  handles money its own VLAN
 - `pktconfig.py` and `pktlayout.py` change the `.pkt` file directly. The file they write unpacks again
   and matches the `configs` folder, but it still has to be opened in Packet Tracer to see that every
   device comes up with the new config. A copy from before each change is in `changes/backups`
